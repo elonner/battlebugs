@@ -12,10 +12,10 @@ Different game modes
 
 
 ### Home Screen
-Different game modes (2? 3? 5?): select on home screen -- buttons or radio buttons
-    Probably none that will alter the layout
-Different difficulties (3?): select on home screen -- maybe up and down arrows with a slot machine type number changing in the middle
-Play button
+Different game modes (2? 3? 5?): select on home screen -- buttons or radio buttons  
+    Probably none that will alter the layout  
+Different difficulties (3?): select on home screen -- maybe up and down arrows with a slot machine type number   changing in the middle  
+Play button  
 
 ### Arrange Ships
 One large grid -- grid display
