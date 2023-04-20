@@ -1,0 +1,45 @@
+1. declare state variables
+2. define classes
+    * Cell
+    * Bug 
+3. use jQuery to cache elements that will be referred to repeatedly
+4. add necessary event listners
+5. call initialize function
+    * creates 2 2D arrays of Cells
+    * randomly arranges CPUs bugs on its board
+    * creates array of Bugs for the user to add
+    * defines relavant variables
+    * renders the display
+6. create functions (realistically step 1 as I will do the above as I work)
+    1. initialize game
+    2. render the display 
+        * render user board
+        * render bugs 
+        * render cpu board
+        * render messages
+        * render controls
+        * render ... 
+    3. handle user board setup
+        * user selects bug
+        * user places bug in desired location
+        * renders the display
+    4. handle user move
+        * user selects cell to fire on
+        * user fires
+        * determine hit, miss, sink
+        * checks for winner
+        * switches turns
+        * changes any other relevant data
+        * renders the display 
+    5. handle CPU move
+        * CPU selects cell to fire on
+            * difficulty 1: totally random
+            * difficulty 2: ...
+            * difficulty n: best battleship algorithm 
+        * CPU fires
+        * determine hit, miss, sink
+        * checks for winner
+        * switches turns
+        * changes any other relevant data
+        * renders the display
+    
