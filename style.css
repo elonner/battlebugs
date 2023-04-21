@@ -15,8 +15,8 @@ body {
     width: 40vw;
     display: grid;
     gap: 0.2vw;
-    grid-template-columns: repeat(10, 1fr);
-    grid-template-rows: repeat(10, 1fr);
+    grid-template-columns: repeat(10, 4vw);
+    grid-template-rows: repeat(10, 4vw);
 }
 
 .cell {
@@ -29,3 +29,19 @@ body {
     background-color: rgb(222, 167, 176);
 }
 
+
+
+.bug.vertical {
+    height: 100%;
+    justify-self: center;
+}
+
+.bug.horizontal {
+    transform: rotate(90deg);
+    justify-self: center;
+    align-self: center;
+}
+
+.bug:hover {
+    transform: scale(0.9);
+}

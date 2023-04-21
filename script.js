@@ -25,7 +25,9 @@ class Bug {
         this.orient = 1; // 1: vertical, -1: horizontal
         this.el = document.createElement('img');
         this.el.setAttribute('src', `Icons/${size}er.png`);
-        // this.el.style.display = 'none';
+        this.el.classList.add('bug');
+        this.type = type;
+        // TODO: think i want to move this out of the constructor
         switch (type) {
             case 'user':
                 userBoardEl.append(this.el);
@@ -51,19 +53,22 @@ init();
 
 
 function init() {
-    //fill bugs array with the 5 bugs
+    // TODO: reset any DOM elements that may have changed
+
+
+    // fill bugs array with the 5 new Bugs
     fillBugs();
-    //fill the boards with new empty cells
+    // fill the boards with new empty cells
     initBoards();
-    //randomize CPU bugs
+    // randomize CPU bugs
     placeCpuBugs();
-    placeUserBugs();
+    placeUserBugs(); // FOR TESTING 
 
     playing = true;
     render();
 }
 
-//fill bugs array with the 5 bugs
+// fill bugs array with the 5 bugs
 function fillBugs() {
     userBugs = [];
     cpuBugs = [];
@@ -74,7 +79,7 @@ function fillBugs() {
     });
 }
 
-//fill the boards with new empty cells
+// fill the boards with new empty cells
 function initBoards() {
     cpuBoard = [];
     userBoard = [];
@@ -142,7 +147,8 @@ function placeCpuBugs() {
         }
     }
 }
-// TEMPORARY PLACE USER BUGS
+
+// FOR TESTING placeCpuBugs PLACE USER BUGS
 function placeUserBugs() {
     let b = 4
     while (b >= 0) {
@@ -196,6 +202,7 @@ function render() {
     renderBugs();
 }
 
+// TODO: need to find a way around display = none so that when a user bug is hit we can show it 
 function renderBoard() {
     cpuBoard.forEach(rows => {
         rows.forEach(cell => {
@@ -212,6 +219,7 @@ function renderBoard() {
     });
 }
 
+// TODO: wtf is going on with these horizontals 
 function renderBugs() {
     if (!playing) {
 
@@ -219,12 +227,12 @@ function renderBugs() {
         userBugs.forEach(bug => {
             console.log(bug);
             if (bug.orient === 1) { // vertical
-                bug.el.setAttribute('style', `grid-column: ${bug.col + 1}; grid-row: ${bug.row + 1} / span ${bug.size}; height: 100%; justify-self: center;`);
+                bug.el.classList.add('vertical');
+                bug.el.setAttribute('style', `grid-column: ${bug.col + 1}; grid-row: ${bug.row + 1} / span ${bug.size};`);
                 userBoardEl.append(bug.el);
-                // bug.el.style.display = '';
             } else { // horizontal (-1)
-                bug.el.setAttribute('style', `grid-column: ${bug.col + 1} / span ${bug.size}; grid-row: ${bug.row + 1}; height: 100%; justify-self: center;`);
-                // bug.el.style.display = '';
+                bug.el.classList.add('horizontal');
+                bug.el.setAttribute('style', `grid-column: ${bug.col + 1} / span ${bug.size}; grid-row: ${bug.row + 1};`);
                 userBoardEl.append(bug.el);
             }
         });
@@ -235,7 +243,7 @@ function handleUserMove() {
 
 }
 
-//allows setting multiple attributes at once
+// allows setting multiple attributes at once
 function setAttributes(el, attrs) {
     for (var key in attrs) {
         el.setAttribute(key, attrs[key]);
