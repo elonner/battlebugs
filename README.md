@@ -2,10 +2,10 @@
 
 ## Notes:
 Battle Bugs! Instead of ships, bugs. Could be unique and fun with cool animations.
-Using jQuery 
 
 ### Priorities:
 * Playable/rendered in browser
+* Use jQuery
 * Follows organization structure as outlined below
 * Different CPU difficulties 
 * Different game modes
