@@ -1,7 +1,7 @@
-//========================== CONSTANTS ========================
+//======================================================== CONSTANTS ======================================================
 const MOVE_DELAY = 200;
 
-//========================= STATE VARIABLES =============================
+//=================================================== STATE VARIABLES ===========================================================
 let userBoard;
 let cpuBoard;
 let userBugs;
@@ -11,7 +11,7 @@ let winner; // null, 1: user, -1: cpu
 let playing;
 let selectedBug;
 
-//========================= CLASSES ===================================
+//======================================================= CLASSES =================================================================
 class Cell {
     constructor(value, pos) {
         this.value = value; // 0: empty, 1: hit, -1: miss
@@ -42,22 +42,22 @@ class Bug {
     }
 }
 
-//======================== CACHE ===========================
+//====================================================== CACHE =========================================================
 const userBoardEl = document.getElementById('user-board');
 const cpuBoardEl = document.getElementById('cpu-board');
 const $bugBox = $('#bug-box');
 
-//======================== EVENT LISTENERS ==================
-$('#cpu-board').on('click', '.cell', userShot);
-$('#user-board').on('click', '.cell', placeBug); // needs to be removed once game is in play mode along with removing the .hovers class
+//====================================================== EVENT LISTENERS ================================================
 $bugBox.on('click', '.bug', selectBug);
 $(document).on('keyup', delegateEvent);
+$('#user-board').on('click', '.cell', placeBug); 
+$('#cpu-board').on('click', '.cell', userShot);
 
-//======================== MAIN =======================
+//====================================================== MAIN =====================================================
 init();
 printBoard(cpuBoard);
 
-//======================== INITIALIZATION =====================
+//====================================================== INITIALIZATION ===================================================
 function init() {
     // TODO: reset any DOM elements that may have changed
 
@@ -68,8 +68,6 @@ function init() {
     initBoards();
     // randomize CPU bugs
     placeCpuBugs();
-    // placeUserBugs(); // FOR TESTING 
-    //placeBugs()
 
     playing = false;
     winner = null;
@@ -141,46 +139,46 @@ function placeCpuBugs() {
     }
 }
 
-//TEMPORARY USE BEFORE USER INPUT IS ADDED
-// function placeUserBugs() {
-//     let b = 4
-//     while (b >= 0) {
-//         var r = Math.floor(Math.random() * 10);
-//         var c = Math.floor(Math.random() * 10);
-//         userBugs[b].orient = Math.random() > 0.5 ? 1 : -1;
-//         var l = userBugs[b].size;
-//         switch (userBugs[b].orient) {
-//             case 1:
-//                 if (isValidPos(userBoard, userBugs[b], r, c)) {
-//                     for (let i = r; i < r + l; i++) {
-//                         userBoard[i][c].isOccupied = true;
-//                         userBoard[i][c].bug = userBugs[b];
-//                         userBugs[b].cellsOn.push(userBoard[i][c]);
-//                     }
-//                     userBugs[b].row = r;
-//                     userBugs[b].col = c;
-//                     b--;
-//                 }
-//                 break;
-//             case -1:
-//                 if (isValidPos(userBoard, userBugs[b], r, c)) {
-//                     for (let i = c; i < c + l; i++) {
-//                         userBoard[r][i].isOccupied = true;
-//                         userBoard[r][i].bug = userBugs[b];
-//                         userBugs[b].cellsOn.push(userBoard[r][i]);
-//                     }
-//                     userBugs[b].row = r;
-//                     userBugs[b].col = c;
-//                     b--;
-//                 }
-//                 break;
-//         }
-//     }
-// }
+// FOR TESTING! RANDOMLY PLACES USER BUGS
+function placeUserBugs() {
+    console.log('place bugs randomly')
+    let b = 4
+    while (b >= 0) {
+        var r = Math.floor(Math.random() * 10);
+        var c = Math.floor(Math.random() * 10);
+        userBugs[b].orient = Math.random() > 0.5 ? 1 : -1;
+        var l = userBugs[b].size;
+        switch (userBugs[b].orient) {
+            case 1:
+                if (isValidPos(userBoard, userBugs[b], r, c)) {
+                    for (let i = r; i < r + l; i++) {
+                        userBoard[i][c].isOccupied = true;
+                        userBoard[i][c].bug = userBugs[b];
+                        userBugs[b].cellsOn.push(userBoard[i][c]);
+                    }
+                    userBugs[b].row = r;
+                    userBugs[b].col = c;
+                    b--;
+                }
+                break;
+            case -1:
+                if (isValidPos(userBoard, userBugs[b], r, c)) {
+                    for (let i = c; i < c + l; i++) {
+                        userBoard[r][i].isOccupied = true;
+                        userBoard[r][i].bug = userBugs[b];
+                        userBugs[b].cellsOn.push(userBoard[r][i]);
+                    }
+                    userBugs[b].row = r;
+                    userBugs[b].col = c;
+                    b--;
+                }
+                break;
+        }
+    }
+}
 
-//=========================== MOVE HANDLERS ================================
+//==================================================== MOVE HANDLERS ==============================================
 function selectBug() {
-    var size = parseInt($(this)[0].classList[1]);
     const $bug = $(this)[0];
     if ($bug.classList.contains('selected')) {                          // DESELECT
         selectedBug = null;
@@ -204,15 +202,26 @@ function rotateBug(bug) {
 }
 
 function placeBug() {
-    if (selectedBug) {
+    if (selectedBug && !playing) {
         const r = parseInt($(this)[0].id[1]);
         const c = parseInt($(this)[0].id[3]);
         if (isValidPos(userBoard, selectedBug, r, c)) {
             selectedBug.col = c;
             selectedBug.row = r;
+            // update cell elements, add cells to bug.cellsOn, 
             if (selectedBug.orient === 1) {
+                // for (let i = r; i < r + l; i++) {
+                //     userBoard[i][c].isOccupied = true;
+                //     userBoard[i][c].bug = selectedBug;
+                //     selectedBug.cellsOn.push(userBoard[i][c]);
+                // }
                 selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1}; grid-row: ${selectedBug.row + 1} / span ${selectedBug.size};`);
             } else {
+                // for (let i = c; i < c + l; i++) {
+                //     userBoard[r][i].isOccupied = true;
+                //     userBoard[r][i].bug = selectedBug;
+                //     selectedBug.cellsOn.push(userBoard[r][i]);
+                // }
                 selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1} / span ${selectedBug.size}; grid-row: ${selectedBug.row + 1};`);
             }
             userBoardEl.append(selectedBug.el);
@@ -276,12 +285,24 @@ function cpuShot() {
 }
 
 function delegateEvent(e) {
-    if (e.keyCode === 32 && selectedBug) {
-        rotateBug(selectedBug);
+    switch (e.keyCode) {
+        case 32: // space 
+            if (selectedBug && !playing) rotateBug(selectedBug);
+            break;
+        case 80: // p to play
+            playing = true;
+            render();
+            break;
+        case 39: // right arrow to randomly place bugs
+            placeUserBugs();
+            playing = true;
+            render();
+            break;
     }
+
 }
 
-//===================================== RENDERERS ==============================
+//================================================== RENDERERS ============================================================
 function render() {
     renderBoards();
     renderBugs();
@@ -291,9 +312,8 @@ function render() {
 // TODO: move the r,c setting and appending to an initializer so its not 
 function renderBoards() {
     if (playing) {                                  // HOVER
-        userBoardEl.classList.remove('hovers');
-    } else if (!playing) {
-        userBoardEl.classList.add('hovers');
+        userBoardEl.classList.remove('hover');
+        $bugBox.toggle();
     }
     if (winner) {                                   // WINNER
         $('#cpu-board').off('click');
@@ -324,6 +344,7 @@ function renderBoards() {
             }
             if (cell.value === -1) {
                 cell.el.style.backgroundColor = 'green';
+                cell.el.style.zIndex = '1';
             }
             cell.el.setAttribute('id', `r${r}c${c}`)
             userBoardEl.append(cell.el);
@@ -358,7 +379,7 @@ function renderBugs() {
     }
 }
 
-//========================== HELPERS ==================================
+//================================================ HELPERS ================================================================
 function getWinner() {
     if (cpuBugs.every(bug => bug.isSquashed)) {
         return 1;
