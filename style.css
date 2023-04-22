@@ -26,7 +26,7 @@ body {
     height: 100%;
 }
 
-.cell:hover {
+#cpu-board > .cell:hover {
     background-color: rgb(222, 167, 176);
 }
 
@@ -38,6 +38,3 @@ body {
     transform: rotate(90deg);
 }
 
-.bug:hover {
-    transform: scale(0.9);
-}

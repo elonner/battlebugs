@@ -43,14 +43,13 @@ class Bug {
 //======================== CACHE ===========================
 const userBoardEl = document.getElementById('user-board');
 const cpuBoardEl = document.getElementById('cpu-board');
+const $bugBox = $('#bug-box');
 
 //======================== EVENT LISTENERS ==================
 $('#cpu-board').on('click', '.cell', handleUserMove);
 
 //======================== MAIN =======================
 init();
-printBoard(cpuBoard);
-//play();
 
 //======================== INITIALIZATION =====================
 function init() {
@@ -63,9 +62,10 @@ function init() {
     initBoards();
     // randomize CPU bugs
     placeCpuBugs();
-    placeUserBugs(); // FOR TESTING 
+    // placeUserBugs(); // FOR TESTING 
+    placeBugs()
 
-    playing = true;
+    playing = false;
     winner = null;
     turn = 1;
     render();
@@ -95,6 +95,10 @@ function initBoards() {
             userBoard[r].push(new Cell(0, [r, c]));
         }
     }
+}
+
+function placeBugs() {
+    
 }
 
 // randomize cpu bugs
@@ -135,41 +139,41 @@ function placeCpuBugs() {
 }
 
 //TEMPORARY USE BEFORE USER INPUT IS ADDED
-function placeUserBugs() {
-    let b = 4
-    while (b >= 0) {
-        var r = Math.floor(Math.random() * 10);
-        var c = Math.floor(Math.random() * 10);
-        userBugs[b].orient = Math.random() > 0.5 ? 1 : -1;
-        var l = userBugs[b].size;
-        switch (userBugs[b].orient) {
-            case 1:
-                if (isValidPos(userBoard, userBugs[b], r, c)) {
-                    for (let i = r; i < r + l; i++) {
-                        userBoard[i][c].isOccupied = true;
-                        userBoard[i][c].bug = userBugs[b];
-                        userBugs[b].cellsOn.push(userBoard[i][c]);
-                    }
-                    userBugs[b].row = r;
-                    userBugs[b].col = c;
-                    b--;
-                }
-                break;
-            case -1:
-                if (isValidPos(userBoard, userBugs[b], r, c)) {
-                    for (let i = c; i < c + l; i++) {
-                        userBoard[r][i].isOccupied = true;
-                        userBoard[r][i].bug = userBugs[b];
-                        userBugs[b].cellsOn.push(userBoard[r][i]);
-                    }
-                    userBugs[b].row = r;
-                    userBugs[b].col = c;
-                    b--;
-                }
-                break;
-        }
-    }
-}
+// function placeUserBugs() {
+//     let b = 4
+//     while (b >= 0) {
+//         var r = Math.floor(Math.random() * 10);
+//         var c = Math.floor(Math.random() * 10);
+//         userBugs[b].orient = Math.random() > 0.5 ? 1 : -1;
+//         var l = userBugs[b].size;
+//         switch (userBugs[b].orient) {
+//             case 1:
+//                 if (isValidPos(userBoard, userBugs[b], r, c)) {
+//                     for (let i = r; i < r + l; i++) {
+//                         userBoard[i][c].isOccupied = true;
+//                         userBoard[i][c].bug = userBugs[b];
+//                         userBugs[b].cellsOn.push(userBoard[i][c]);
+//                     }
+//                     userBugs[b].row = r;
+//                     userBugs[b].col = c;
+//                     b--;
+//                 }
+//                 break;
+//             case -1:
+//                 if (isValidPos(userBoard, userBugs[b], r, c)) {
+//                     for (let i = c; i < c + l; i++) {
+//                         userBoard[r][i].isOccupied = true;
+//                         userBoard[r][i].bug = userBugs[b];
+//                         userBugs[b].cellsOn.push(userBoard[r][i]);
+//                     }
+//                     userBugs[b].row = r;
+//                     userBugs[b].col = c;
+//                     b--;
+//                 }
+//                 break;
+//         }
+//     }
+// }
 
 //=========================== MOVE HANDLERS ================================
 function handleUserMove() {
@@ -178,15 +182,12 @@ function handleUserMove() {
     const cell = cpuBoard[r][c];
     if (cell.value !== 0) return;
     if (isHit(cpuBoard, r, c)) {                  // HIT
-        console.log('hit');
         cell.value = 1;
         cell.bug.hits++;
         if (cell.bug.hits === cell.bug.size) {   // SQUASHED
-            console.log('squashed');
             cell.bug.isSquashed = true;
         }
     } else {                                     // MISS
-        console.log('miss');
         cell.value = -1;
     }
     turn = -1;
@@ -210,15 +211,12 @@ function handleCpuMove() {
         if (cell.value === 0) { // if it hasn't been shot at yet
             validMove = true;
             if (isHit(userBoard, r, c)) {                // HIT
-                console.log('CPU HIT');
                 cell.value = 1;
                 cell.bug.hits++;
                 if (cell.bug.hits === cell.bug.size) {   // SQUASHED
                     cell.bug.isSquashed = true;
-                    console.log('CPU SQUASH')
                 }
             } else {                                     // MISS
-                console.log('CPU MISS');
                 cell.value = -1;
             }
         }
@@ -229,13 +227,12 @@ function handleCpuMove() {
     if (!winner) $('#cpu-board').on('click', '.cell', handleUserMove);
 }
 
-//===================================== RENDERERS ====================================
+//===================================== RENDERERS ==============================
 function render() {
     renderBoards();
     renderBugs();
 }
 
-// TODO: need to find a way around display = none so that when a user bug is hit we can show it 
 function renderBoards() {
     if (winner) {
         $('#cpu-board').off('click');
@@ -244,6 +241,8 @@ function renderBoards() {
     cpuBoard.forEach((row, r) => {
         row.forEach((cell, c) => {
             cell.el.setAttribute('id', `r${r}c${c}`)
+            cell.el.style.gridColumn = `${c+1} / ${c+2}`;
+            cell.el.style.gridRow = `${r+1} / ${r+2}`;
             if (cell.value === 1) {
                 cell.el.style.backgroundColor = 'red';
             }
@@ -255,11 +254,12 @@ function renderBoards() {
     });
     userBoard.forEach((row, r) => {
         row.forEach((cell, c) => {
-            if (cell.isOccupied) {
-                cell.el.style.display = 'none';
-            }
+            cell.el.setAttribute('id', `r${r}c${c}`)
+            cell.el.style.gridColumn = `${c+1} / ${c+2}`;
+            cell.el.style.gridRow = `${r+1} / ${r+2}`;
             if (cell.value === 1) {
                 cell.el.style.backgroundColor = 'red';
+                cell.el.style.zIndex = '1';
             }
             if (cell.value === -1) {
                 cell.el.style.backgroundColor = 'green';
@@ -273,7 +273,9 @@ function renderBoards() {
 // TODO: wtf is going on with these horizontals 
 function renderBugs() {
     if (!playing) {
+        userBugs.forEach(bug => {
 
+        })
     } else if (playing) {
         userBugs.forEach(bug => {
             if (bug.type === 'user') {
