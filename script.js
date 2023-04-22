@@ -9,6 +9,7 @@ let cpuBugs;
 let turn; // 1, -1
 let winner; // null, 1: user, -1: cpu
 let playing;
+let selectedBug;
 
 //========================= CLASSES ===================================
 class Cell {
@@ -31,12 +32,13 @@ class Bug {
         this.orient = 1; // 1: vertical, -1: horizontal
         this.el = document.createElement('img');
         this.el.setAttribute('src', `Icons/${size}er.png`);
-        this.el.classList.add('bug');
+        this.el.classList.add('bug', `${size}`);
         this.row; // top row
         this.col; // left column 
         this.hits = 0; // total hits
         this.isSquashed = false; //css idea --> footprints then squashed animation
         this.cellsOn = []; // links to cells bug is covering
+        this.isPlaced = false; // is it placed on the board already
     }
 }
 
@@ -47,9 +49,12 @@ const $bugBox = $('#bug-box');
 
 //======================== EVENT LISTENERS ==================
 $('#cpu-board').on('click', '.cell', handleUserMove);
+$('#user-board').on('click', '.cell', handleUserPlace); // needs to be removed once game is in play mode along with removing the .hovers class
+$bugBox.on('click', '.bug', placeBug);
 
 //======================== MAIN =======================
 init();
+printBoard(cpuBoard);
 
 //======================== INITIALIZATION =====================
 function init() {
@@ -63,10 +68,11 @@ function init() {
     // randomize CPU bugs
     placeCpuBugs();
     // placeUserBugs(); // FOR TESTING 
-    placeBugs()
+    //placeBugs()
 
     playing = false;
     winner = null;
+    selectedBug = null;
     turn = 1;
     render();
 }
@@ -97,8 +103,31 @@ function initBoards() {
     }
 }
 
-function placeBugs() {
-    
+// TODO: make sure only 1 bug at a time can be selected, can we do without DOM manip, break down into smaller functions
+function placeBug() {
+    var size = parseInt($(this)[0].classList[1]);
+    const $bug = $(this)[0];
+    if ($bug.classList.contains('selected')) { // DESELECT
+        selectedBug = null;
+        $bug.classList.remove('selected');
+        $(document).off('keyup');
+    } else {
+        if (selectedBug) selectedBug.el.classList.remove('selected');
+        selectedBug = userBugs.find(bug => bug.size === size && !bug.isPlaced);
+        $bug.classList.add('selected');
+        $(document).on('keyup', (e) => {
+            if (e.keyCode === 32) { // still issues with this
+                console.log(selectedBug.el.classList);
+                if (selectedBug.el.classList.contains('horizontal')) {
+                    selectedBug.el.classList.remove('horizontal');
+                } else {
+                    selectedBug.el.classList.add('horizontal');
+                }
+                selectedBug.orient *= (-1);
+            }
+        });
+    }
+
 }
 
 // randomize cpu bugs
@@ -177,8 +206,8 @@ function placeCpuBugs() {
 
 //=========================== MOVE HANDLERS ================================
 function handleUserMove() {
-    const r = $(this)[0].id[1];
-    const c = $(this)[0].id[3];
+    const r = parseInt($(this)[0].id[1]);
+    const c = parseInt($(this)[0].id[3]);
     const cell = cpuBoard[r][c];
     if (cell.value !== 0) return;
     if (isHit(cpuBoard, r, c)) {                  // HIT
@@ -198,6 +227,35 @@ function handleUserMove() {
         //make sure user can't move when CPU turn 
         $('#cpu-board').off('click');
         setTimeout(handleCpuMove, MOVE_DELAY);
+    }
+}
+
+function handleUserPlace() {
+    const r = parseInt($(this)[0].id[1]);
+    const c = parseInt($(this)[0].id[3]);
+    const cell = userBoard[r][c];
+    if (selectedBug) {
+        console.log(r, c);
+        if (selectedBug.orient === 1) {
+            if (isValidPos(userBoard, selectedBug, r, c)) {
+                selectedBug.col = c;
+                selectedBug.row = r;
+                selectedBug.el.classList.add('vertical');
+                selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1}; grid-row: ${selectedBug.row + 1} / span ${selectedBug.size};`);
+                userBoardEl.append(selectedBug.el);
+                selectedBug.isPlaced = true;
+            }
+        } else {
+            if (isValidPos(userBoard, selectedBug, r, c)) {
+                selectedBug.col = c;
+                selectedBug.row = r;
+                selectedBug.el.classList.add('horizontal');
+                selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1} / span ${selectedBug.size}; grid-row: ${selectedBug.row + 1};`);
+                userBoardEl.append(selectedBug.el);
+                selectedBug.isPlaced = true;
+            }
+        }
+
     }
 }
 
@@ -234,6 +292,11 @@ function render() {
 }
 
 function renderBoards() {
+    if (playing) {
+        userBoardEl.classList.remove('hovers');
+    } else if (!playing) {
+        userBoardEl.classList.add('hovers');
+    }
     if (winner) {
         $('#cpu-board').off('click');
         console.log('Winner', winner)
@@ -241,8 +304,8 @@ function renderBoards() {
     cpuBoard.forEach((row, r) => {
         row.forEach((cell, c) => {
             cell.el.setAttribute('id', `r${r}c${c}`)
-            cell.el.style.gridColumn = `${c+1} / ${c+2}`;
-            cell.el.style.gridRow = `${r+1} / ${r+2}`;
+            cell.el.style.gridColumn = `${c + 1} / ${c + 2}`;
+            cell.el.style.gridRow = `${r + 1} / ${r + 2}`;
             if (cell.value === 1) {
                 cell.el.style.backgroundColor = 'red';
             }
@@ -255,8 +318,8 @@ function renderBoards() {
     userBoard.forEach((row, r) => {
         row.forEach((cell, c) => {
             cell.el.setAttribute('id', `r${r}c${c}`)
-            cell.el.style.gridColumn = `${c+1} / ${c+2}`;
-            cell.el.style.gridRow = `${r+1} / ${r+2}`;
+            cell.el.style.gridColumn = `${c + 1} / ${c + 2}`;
+            cell.el.style.gridRow = `${r + 1} / ${r + 2}`;
             if (cell.value === 1) {
                 cell.el.style.backgroundColor = 'red';
                 cell.el.style.zIndex = '1';
@@ -274,7 +337,7 @@ function renderBoards() {
 function renderBugs() {
     if (!playing) {
         userBugs.forEach(bug => {
-
+            $bugBox.append(bug.el);
         })
     } else if (playing) {
         userBugs.forEach(bug => {
@@ -310,7 +373,7 @@ function isValidPos(board, bug, r, c) {
     var l = bug.size;
     switch (bug.orient) {
         case 1:
-            if (r + l < 10) {
+            if (r + l <= 10) {
                 for (let i = r; i < r + l; i++) {
                     if (board[i][c].isOccupied) {
                         return false;
@@ -321,7 +384,7 @@ function isValidPos(board, bug, r, c) {
             }
             return true;
         case -1:
-            if (c + l < 10) {
+            if (c + l <= 10) {
                 for (let i = c; i < c + l; i++) {
                     if (board[r][i].isOccupied) {
                         return false;

@@ -26,8 +26,13 @@ body {
     height: 100%;
 }
 
-#cpu-board > .cell:hover {
+#cpu-board > .cell:hover,
+.hovers > .cell:hover {
     background-color: rgb(222, 167, 176);
+}
+
+#cpu-board > .cell:active {
+    background-color: rgb(199, 151, 159);
 }
 
 .bug.vertical {
@@ -36,5 +41,9 @@ body {
 
 .bug.horizontal {
     transform: rotate(90deg);
+}
+
+.selected {
+    border: 1px solid red;
 }
 
