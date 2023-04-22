@@ -1,3 +1,6 @@
+//========================== CONSTANTS ========================
+const MOVE_DELAY = 200;
+
 //========================= STATE VARIABLES =============================
 let userBoard;
 let cpuBoard;
@@ -47,8 +50,7 @@ $('#cpu-board').on('click', '.cell', handleUserMove);
 //======================== MAIN =======================
 init();
 printBoard(cpuBoard);
-console.log(winner);
-play();
+//play();
 
 //======================== INITIALIZATION =====================
 function init() {
@@ -65,6 +67,7 @@ function init() {
 
     playing = true;
     winner = null;
+    turn = 1;
     render();
 }
 
@@ -131,7 +134,6 @@ function placeCpuBugs() {
     }
 }
 
-
 //TEMPORARY USE BEFORE USER INPUT IS ADDED
 function placeUserBugs() {
     let b = 4
@@ -169,27 +171,62 @@ function placeUserBugs() {
     }
 }
 
-//=============================== GAME PLAY ===============================
-function play() {
-
-}
-
 //=========================== MOVE HANDLERS ================================
 function handleUserMove() {
     const r = $(this)[0].id[1];
     const c = $(this)[0].id[3];
     const cell = cpuBoard[r][c];
-    if (isHit(cpuBoard, r, c)) {         // HIT
+    if (cell.value !== 0) return;
+    if (isHit(cpuBoard, r, c)) {                  // HIT
+        console.log('hit');
         cell.value = 1;
-        cell.hits++;
-        if (cell.hits === cell.size) {   // SQUASHED
+        cell.bug.hits++;
+        if (cell.bug.hits === cell.bug.size) {   // SQUASHED
+            console.log('squashed');
             cell.bug.isSquashed = true;
         }
-    } else {
+    } else {                                     // MISS
+        console.log('miss');
         cell.value = -1;
     }
+    turn = -1;
     winner = getWinner();
     render();
+    // CPU turn
+    if (!winner) {
+        //make sure user can't move when CPU turn 
+        $('#cpu-board').off('click');
+        setTimeout(handleCpuMove, MOVE_DELAY);
+    }
+}
+
+function handleCpuMove() {
+    let validMove = false;
+    while (!validMove) {
+        // select random cell
+        var r = Math.floor(Math.random() * 10);
+        var c = Math.floor(Math.random() * 10);
+        const cell = userBoard[r][c];
+        if (cell.value === 0) { // if it hasn't been shot at yet
+            validMove = true;
+            if (isHit(userBoard, r, c)) {                // HIT
+                console.log('CPU HIT');
+                cell.value = 1;
+                cell.bug.hits++;
+                if (cell.bug.hits === cell.bug.size) {   // SQUASHED
+                    cell.bug.isSquashed = true;
+                    console.log('CPU SQUASH')
+                }
+            } else {                                     // MISS
+                console.log('CPU MISS');
+                cell.value = -1;
+            }
+        }
+    }
+    turn = 1;
+    winner = getWinner();
+    render();
+    if (!winner) $('#cpu-board').on('click', '.cell', handleUserMove);
 }
 
 //===================================== RENDERERS ====================================
@@ -200,9 +237,19 @@ function render() {
 
 // TODO: need to find a way around display = none so that when a user bug is hit we can show it 
 function renderBoards() {
+    if (winner) {
+        $('#cpu-board').off('click');
+        console.log('Winner', winner)
+    }
     cpuBoard.forEach((row, r) => {
         row.forEach((cell, c) => {
             cell.el.setAttribute('id', `r${r}c${c}`)
+            if (cell.value === 1) {
+                cell.el.style.backgroundColor = 'red';
+            }
+            if (cell.value === -1) {
+                cell.el.style.backgroundColor = 'green';
+            }
             cpuBoardEl.append(cell.el);
         });
     });
@@ -210,6 +257,12 @@ function renderBoards() {
         row.forEach((cell, c) => {
             if (cell.isOccupied) {
                 cell.el.style.display = 'none';
+            }
+            if (cell.value === 1) {
+                cell.el.style.backgroundColor = 'red';
+            }
+            if (cell.value === -1) {
+                cell.el.style.backgroundColor = 'green';
             }
             cell.el.setAttribute('id', `r${r}c${c}`)
             userBoardEl.append(cell.el);
@@ -244,9 +297,9 @@ function renderBugs() {
 //========================== HELPERS ==================================
 function getWinner() {
     if (cpuBugs.every(bug => bug.isSquashed)) {
-        return -1;
-    } else if (userBugs.every(bug => bug.isSquashed)) {
         return 1;
+    } else if (userBugs.every(bug => bug.isSquashed)) {
+        return -1;
     }
     return null;
 }
