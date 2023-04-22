@@ -73,6 +73,9 @@ function init() {
     winner = null;
     selectedBug = null;
     turn = 1;
+
+    initialRender();
+
     render();
 }
 
@@ -208,20 +211,21 @@ function placeBug() {
         if (isValidPos(userBoard, selectedBug, r, c)) {
             selectedBug.col = c;
             selectedBug.row = r;
+            const l = selectedBug.size;
             // update cell elements, add cells to bug.cellsOn, 
             if (selectedBug.orient === 1) {
-                // for (let i = r; i < r + l; i++) {
-                //     userBoard[i][c].isOccupied = true;
-                //     userBoard[i][c].bug = selectedBug;
-                //     selectedBug.cellsOn.push(userBoard[i][c]);
-                // }
+                for (let i = r; i < r + l; i++) {
+                    userBoard[i][c].isOccupied = true;
+                    userBoard[i][c].bug = selectedBug;
+                    selectedBug.cellsOn.push(userBoard[i][c]);
+                }
                 selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1}; grid-row: ${selectedBug.row + 1} / span ${selectedBug.size};`);
             } else {
-                // for (let i = c; i < c + l; i++) {
-                //     userBoard[r][i].isOccupied = true;
-                //     userBoard[r][i].bug = selectedBug;
-                //     selectedBug.cellsOn.push(userBoard[r][i]);
-                // }
+                for (let i = c; i < c + l; i++) {
+                    userBoard[r][i].isOccupied = true;
+                    userBoard[r][i].bug = selectedBug;
+                    selectedBug.cellsOn.push(userBoard[r][i]);
+                }
                 selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1} / span ${selectedBug.size}; grid-row: ${selectedBug.row + 1};`);
             }
             userBoardEl.append(selectedBug.el);
@@ -303,11 +307,36 @@ function delegateEvent(e) {
 }
 
 //================================================== RENDERERS ============================================================
+function initialRender() {
+    if (!playing) {                                
+        userBugs.forEach(bug => {                   // ADD bugs to box
+            bug.el.classList.add('vertical');
+            $bugBox.append(bug.el);
+        });
+        cpuBoard.forEach(row => {                   // ADD cells to boards
+            row.forEach(cell => {
+                addCelltoBoard(cpuBoardEl, cell);
+            });
+        });
+        userBoard.forEach(row => {
+            row.forEach(cell => {
+                addCelltoBoard(userBoardEl, cell);
+            });
+        });
+    }  
+}
+
+function addCelltoBoard(boardEl, cell) {
+    cell.el.setAttribute('id', `r${cell.row}c${cell.col}`)
+    cell.el.style.gridColumn = `${cell.col + 1} / ${cell.col + 2}`;
+    cell.el.style.gridRow = `${cell.row + 1} / ${cell.row + 2}`;
+    boardEl.append(cell.el);
+}
+
 function render() {
     renderBoards();
     renderBugs();
 }
-
 
 // TODO: move the r,c setting and appending to an initializer so its not 
 function renderBoards() {
@@ -319,25 +348,18 @@ function renderBoards() {
         $('#cpu-board').off('click');
         console.log('Winner', winner)
     }
-    cpuBoard.forEach((row, r) => {
-        row.forEach((cell, c) => {
-            cell.el.setAttribute('id', `r${r}c${c}`)
-            cell.el.style.gridColumn = `${c + 1} / ${c + 2}`;
-            cell.el.style.gridRow = `${r + 1} / ${r + 2}`;
+    cpuBoard.forEach(row => {
+        row.forEach(cell => {
             if (cell.value === 1) {
                 cell.el.style.backgroundColor = 'red';
             }
             if (cell.value === -1) {
                 cell.el.style.backgroundColor = 'green';
             }
-            cpuBoardEl.append(cell.el);
         });
     });
-    userBoard.forEach((row, r) => {
-        row.forEach((cell, c) => {
-            cell.el.setAttribute('id', `r${r}c${c}`)
-            cell.el.style.gridColumn = `${c + 1} / ${c + 2}`;
-            cell.el.style.gridRow = `${r + 1} / ${r + 2}`;
+    userBoard.forEach(row => {
+        row.forEach(cell => {
             if (cell.value === 1) {
                 cell.el.style.backgroundColor = 'red';
                 cell.el.style.zIndex = '1';
@@ -346,20 +368,13 @@ function renderBoards() {
                 cell.el.style.backgroundColor = 'green';
                 cell.el.style.zIndex = '1';
             }
-            cell.el.setAttribute('id', `r${r}c${c}`)
-            userBoardEl.append(cell.el);
         });
     });
 }
 
 // TODO: wtf is going on with these horizontals 
 function renderBugs() {
-    if (!playing) {                                 // PLACE BUGS
-        userBugs.forEach(bug => {
-            bug.el.classList.add('vertical');
-            $bugBox.append(bug.el);
-        })
-    } else if (playing) {                           // GAMEPLAY
+    if (playing) {                           
         userBugs.forEach(bug => {
             if (bug.type === 'user') {
                 userBoardEl.append(this.el);
