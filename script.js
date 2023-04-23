@@ -64,6 +64,7 @@ const $bugBox = $('#bug-box');
 //====================================================== EVENT LISTENERS ================================================
 $('#difficulty').on('click', 'img', changeDifficulty);
 $('#play-btn').on('click', play);
+$('#ready-btn').on('click', startGame);
 $bugBox.on('click', '.bug', selectBug);
 $(document).on('keyup', delegateEvent);
 
@@ -74,23 +75,44 @@ $cpuBoard.on('click', '.cell', userShot);
 
 //====================================================== SET UP =====================================================
 function changeDifficulty() {
-
+    switch ($(this)[0].id) {
+        case 'right':
+            if (difficulty < 2) {
+                difficulty++;
+                $('#difficulty>h1').html(`${DIFFICULTIES[difficulty]}`);
+            }
+            break;
+        case 'left':
+            if (difficulty > 0) {
+                difficulty--;
+                $('#difficulty>h1').html(`${DIFFICULTIES[difficulty]}`);
+            }
+            break;
+    }
 }
 
 function play() {
-    let checkedEl; 
+    let checkedEl;
     $radioButtons.each((i, btnEl) => {
         if (btnEl.checked) checkedEl = btnEl;
     });
     mode = MODES[MODES.findIndex(MODE => MODE === checkedEl.id)];
-    $startScreen.css({display: 'none'});
+    $startScreen.css({ display: 'none' });
     init();
+}
+
+function startGame() { 
+    if (allBugsPlaced(userBugs)) {
+        playing = true;
+        $('#ready-btn').css({display: 'none'});
+        render();
+    }
 }
 
 //====================================================== INITIALIZATION ===================================================
 function init() {
     // TODO: reset any DOM elements that may have changed 
-    $gameScreen.css({display: 'flex'}); 
+    $gameScreen.css({ display: 'flex' });
     console.log(mode);
 
     // fill bugs array with the 5 new Bugs
@@ -217,11 +239,11 @@ function selectBug() {
     const $bug = $(this);
     if (selectedBug && $bug[0] === selectedBug.$[0]) {
         selectedBug.$.removeClass('selected');                    // DESELECT click
-        selectedBug = null;     
+        selectedBug = null;
     } else {                                                      // SELECT click
-        if (selectedBug) selectedBug.$.removeClass('selected');   
+        if (selectedBug) selectedBug.$.removeClass('selected');
         $bug.addClass('selected');
-        selectedBug = userBugs.find(bug => bug.$[0] === $bug[0]);  
+        selectedBug = userBugs.find(bug => bug.$[0] === $bug[0]);
     }
 }
 // function selectBug() {
@@ -236,6 +258,7 @@ function selectBug() {
 //     }
 // }
 
+// TODO: make sure you cant rotate after the bug is placed
 function rotateBug(bug) {
     if (bug.orient === 1) {
         bug.$.removeClass('vertical').addClass('horizontal');
@@ -264,7 +287,7 @@ function placeBug() {
                     userBoard[i][c].bug = selectedBug;
                     selectedBug.cellsOn.push(userBoard[i][c]);
                 }
-                selectedBug.$.css({ gridArea: `${r+1} / ${c+1} / ${r+1+l} / ${c+1}`});
+                selectedBug.$.css({ gridArea: `${r + 1} / ${c + 1} / ${r + 1 + l} / ${c + 1}` });
                 // selectedBug.$.css({ gridColumn: `${selectedBug.col + 1}`, gridRrow: `${selectedBug.row + 1} / span ${selectedBug.size}` });
                 // selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1}; grid-row: ${selectedBug.row + 1} / span ${selectedBug.size};`);
             } else {
@@ -273,7 +296,7 @@ function placeBug() {
                     userBoard[r][i].bug = selectedBug;
                     selectedBug.cellsOn.push(userBoard[r][i]);
                 }
-                selectedBug.$.css({ gridArea: `${r+1} / ${c+1} / ${r+1} / ${c+1+l}`});
+                selectedBug.$.css({ gridArea: `${r + 1} / ${c + 1} / ${r + 1} / ${c + 1 + l}` });
                 // selectedBug.$.css({ gridColumn: `${selectedBug.col + 1} / span ${selectedBug.size}`, gridRow: `${selectedBug.row + 1}` });
                 // selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1} / span ${selectedBug.size}; grid-row: ${selectedBug.row + 1};`);
             }
@@ -320,7 +343,7 @@ function cpuShot() {
     switch (difficulty) {
         case 0:
             targetCell = easySelect();
-            break; 
+            break;
         case 1:
             targetCell = mediumSelect();
             break;
@@ -389,45 +412,43 @@ function initialRender() {
 function render() {
     renderBoards();
     renderBugs();
+    renderGameOver();
 }
 
 // TODO: move the r,c setting and appending to an initializer so its not 
 function renderBoards() {
     if (playing) {                                  // HOVER
+        $cpuBoard.css({display: 'grid'});
         $userBoard.removeClass('hover');
         // userBoardEl.classList.remove('hover');
         $bugBox.toggle();
-    }
-    if (winner) {                                   // WINNER
-        $('#cpu-board').off('click');
-        console.log('Winner', winner)
-    }
-    cpuBoard.forEach(row => {
-        row.forEach(cell => {
-            if (cell.value === 1) {
-                cell.$.css({ backgroundColor: 'red' });
-                // cell.el.style.backgroundColor = 'red';
-            }
-            if (cell.value === -1) {
-                cell.$.css({ backgroundColor: 'green' });
-                // cell.el.style.backgroundColor = 'green';
-            }
+        cpuBoard.forEach(row => {
+            row.forEach(cell => {
+                if (cell.value === 1) {
+                    cell.$.css({ backgroundColor: 'red' });
+                    // cell.el.style.backgroundColor = 'red';
+                }
+                if (cell.value === -1) {
+                    cell.$.css({ backgroundColor: 'green' });
+                    // cell.el.style.backgroundColor = 'green';
+                }
+            });
         });
-    });
-    userBoard.forEach(row => {
-        row.forEach(cell => {
-            if (cell.value === 1) {
-                cell.$.css({ backgroundColor: 'red', zIndex: '1' });
-                // cell.el.style.backgroundColor = 'red';
-                // cell.el.style.zIndex = '1';
-            }
-            if (cell.value === -1) {
-                cell.$.css({ backgroundColor: 'green', zIndex: '1' });
-                // cell.el.style.backgroundColor = 'green';
-                // cell.el.style.zIndex = '1';
-            }
+        userBoard.forEach(row => {
+            row.forEach(cell => {
+                if (cell.value === 1) {
+                    cell.$.css({ backgroundColor: 'red', zIndex: '1' });
+                    // cell.el.style.backgroundColor = 'red';
+                    // cell.el.style.zIndex = '1';
+                }
+                if (cell.value === -1) {
+                    cell.$.css({ backgroundColor: 'green', zIndex: '1' });
+                    // cell.el.style.backgroundColor = 'green';
+                    // cell.el.style.zIndex = '1';
+                }
+            });
         });
-    });
+    }
 }
 
 // TODO: wtf is going on with these horizontals (classes are added/removed in rotateBug)
@@ -447,6 +468,22 @@ function renderBugs() {
             }
             $userBoard.append(bug.$);
         });
+    }
+}
+
+function renderGameOver() {
+    if (winner) {                                 
+        $cpuBoard.off('click');
+        let $winMsg;
+        switch (winner) {
+            case 1: 
+                $winMsg = $('<h1>YOU WIN!</h1>');
+                break;
+            case -1:
+                $winMsg = $('<h1>CPU WINS :(</h1>');
+                break;
+        }
+        $gameScreen.append($winMsg);
     }
 }
 
@@ -549,4 +586,8 @@ function printBoard(board) {
     modBoard.forEach(row => {
         console.log(row);
     });
+}
+
+function allBugsPlaced(bugs) {
+    return bugs.every(bug => bug.isPlaced);
 }
