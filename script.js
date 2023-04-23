@@ -1,8 +1,11 @@
 //======================================================== CONSTANTS ======================================================
 const MOVE_DELAY = 200;
+const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
+const MODES = ['normal'];
 
 //=================================================== STATE VARIABLES ===========================================================
-let difficulty;
+let mode = 0;
+let difficulty = 0;
 let cpuBoard;
 let userBoard;
 let cpuBugs;
@@ -48,6 +51,9 @@ class Bug {
 }
 
 //====================================================== CACHE =========================================================
+const $startScreen = $('#start-screen');
+const $radioButtons = $('.radio-btn');
+const $gameScreen = $('#game-screen');
 const $userBoard = $('#user-board');
 const $cpuBoard = $('#cpu-board');
 // const userBoardEl = document.getElementById('user-board');
@@ -56,6 +62,8 @@ const $cpuBoard = $('#cpu-board');
 const $bugBox = $('#bug-box');
 
 //====================================================== EVENT LISTENERS ================================================
+$('#difficulty').on('click', 'img', changeDifficulty);
+$('#play-btn').on('click', play);
 $bugBox.on('click', '.bug', selectBug);
 $(document).on('keyup', delegateEvent);
 
@@ -64,14 +72,26 @@ $cpuBoard.on('click', '.cell', userShot);
 // $('#user-board').on('click', '.cell', placeBug); 
 // $('#cpu-board').on('click', '.cell', userShot);
 
-//====================================================== MAIN =====================================================
-init();
-printBoard(cpuBoard);
+//====================================================== SET UP =====================================================
+function changeDifficulty() {
+
+}
+
+function play() {
+    let checkedEl; 
+    $radioButtons.each((i, btnEl) => {
+        if (btnEl.checked) checkedEl = btnEl;
+    });
+    mode = MODES[MODES.findIndex(MODE => MODE === checkedEl.id)];
+    $startScreen.css({display: 'none'});
+    init();
+}
 
 //====================================================== INITIALIZATION ===================================================
 function init() {
-    // TODO: reset any DOM elements that may have changed
-
+    // TODO: reset any DOM elements that may have changed 
+    $gameScreen.css({display: 'flex'}); 
+    console.log(mode);
 
     // fill bugs array with the 5 new Bugs
     fillBugs();
@@ -79,11 +99,12 @@ function init() {
     initBoards();
     // randomize CPU bugs
     placeCpuBugs();
+    printBoard(cpuBoard); // TESTING 
 
     playing = false;
     winner = null;
     selectedBug = null;
-    turn = 1;
+    turn = 1; // do i need this??
 
     initialRender();
 
@@ -273,7 +294,7 @@ function userShot() {
         const c = parseInt($(this)[0].id[3]);
         const cell = cpuBoard[r][c];
         if (cell.value !== 0) return;
-        if (isHit(cpuBoard, r, c)) {                  // HIT
+        if (isHit(cpuBoard, cell)) {                  // HIT
             cell.value = 1;
             cell.bug.hits++;
             if (cell.bug.hits === cell.bug.size) {   // SQUASHED
@@ -295,25 +316,28 @@ function userShot() {
 }
 
 function cpuShot() {
-    let validMove = false;
-    while (!validMove) {
-        // select random cell
-        var r = Math.floor(Math.random() * 10);
-        var c = Math.floor(Math.random() * 10);
-        const cell = userBoard[r][c];
-        if (cell.value === 0) { // if it hasn't been shot at yet
-            validMove = true;
-            if (isHit(userBoard, r, c)) {                // HIT
-                cell.value = 1;
-                cell.bug.hits++;
-                if (cell.bug.hits === cell.bug.size) {   // SQUASHED
-                    cell.bug.isSquashed = true;
-                }
-            } else {                                     // MISS
-                cell.value = -1;
-            }
-        }
+    let targetCell;
+    switch (difficulty) {
+        case 0:
+            targetCell = easySelect();
+            break; 
+        case 1:
+            targetCell = mediumSelect();
+            break;
+        case 2:
+            targetCell = hardSelect();
+            break;
     }
+    if (isHit(userBoard, targetCell)) {                      // HIT
+        targetCell.value = 1;
+        targetCell.bug.hits++;
+        if (targetCell.bug.hits === targetCell.bug.size) {   // SQUASHED
+            targetCell.bug.isSquashed = true;
+        }
+    } else {                                                 // MISS
+        targetCell.value = -1;
+    }
+
     turn = 1;
     winner = getWinner();
     render();
@@ -448,6 +472,29 @@ function getWinner() {
     return null;
 }
 
+function easySelect() {
+    let validMove = false;
+    let cell;
+    while (!validMove) {
+        // select random cell
+        var r = Math.floor(Math.random() * 10);
+        var c = Math.floor(Math.random() * 10);
+        cell = userBoard[r][c];
+        if (cell.value === 0) { // if it hasn't been shot at yet
+            validMove = true;
+        }
+    }
+    return cell;
+}
+
+function mediumSelect() {
+
+}
+
+function hardSelect() {
+
+}
+
 function isValidPos(board, bug, r, c) {
     var l = bug.size;
     switch (bug.orient) {
@@ -477,8 +524,8 @@ function isValidPos(board, bug, r, c) {
     return false;
 }
 
-function isHit(board, r, c) {
-    return board[r][c].isOccupied;
+function isHit(board, cell) {
+    return board[cell.row][cell.col].isOccupied;
 }
 
 function setAttributes(el, attrs) {

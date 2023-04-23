@@ -8,16 +8,38 @@
     <title>Battlebugs!</title>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.4.js"
-        integrity="sha256-a9jBBRygX1Bh5lt8GZjXDzyOB+bWve9EiO7tROUtj/E=" 
-        crossorigin="anonymous"></script>
+        integrity="sha256-a9jBBRygX1Bh5lt8GZjXDzyOB+bWve9EiO7tROUtj/E=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="style.css">
     <script defer src="script.js"></script>
 </head>
 
 <body>
-    <div id="cpu-board" class="board hover"></div>
-    <div id="user-board" class="board hover"></div>
-    <div id="bug-box"></div>
+    <div id="start-screen">
+        <h1>Battle Bugs!</h1>
+        <div id="game-mode">
+            <label class="radio-label">
+                <input name="radio-btn" type="radio" class="radio-btn" id="normal" checked>normal
+            </label>
+            <label class="radio-label">
+                <input name="radio-btn" type="radio" class="radio-btn" id="second">mode 2
+            </label>
+            <label class="radio-label">
+                <input name="radio-btn" type="radio" class="radio-btn" id="third">mode 3
+            </label>
+        </div>
+        <div id="difficulty">
+            <img id="left" src="https://cdn-icons-png.flaticon.com/512/271/271220.png" alt="">   
+            <h1>EASY</h1>
+            <img id="right" src="https://cdn-icons-png.flaticon.com/512/271/271220.png" alt="">   
+        </div>
+        <button id="play-btn">PLAY</button>
+    </div>
+
+    <div id="game-screen">
+        <div id="cpu-board" class="board hover"></div>
+        <div id="user-board" class="board hover"></div>
+        <div id="bug-box"></div>
+    </div>
 </body>
 
 </html>

@@ -3,8 +3,17 @@
     margin: 0;
 }
 
-body {
-    display: flex;
+/* \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ START SCREEN \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ */
+
+#left,
+#right {
+    height: 30px;
+}
+
+/* \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ GAME MODE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ */
+
+#game-screen {
+    display: none;
     height: 100vh;
     justify-content: space-around;
     align-items: center;
