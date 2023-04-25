@@ -9,13 +9,23 @@
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.4.js"
         integrity="sha256-a9jBBRygX1Bh5lt8GZjXDzyOB+bWve9EiO7tROUtj/E=" crossorigin="anonymous"></script>
+    <!-- fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Grandstander:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script defer src="script.js"></script>
 </head>
 
 <body>
     <div id="start-screen">
-        <h1>Battle Bugs!</h1>
+        <label id="fast-mode">
+            <input id="fast-check" type="checkbox"> Fast Mode: your bugs will be placed randomely and the CPU will make
+            its moves immediately
+        </label>
+        <h1>BATTLEBUGS</h1>
         <div id="game-mode">
             <label class="radio-label">
                 <input name="radio-btn" type="radio" class="radio-btn" id="normal" checked>normal
@@ -28,18 +38,30 @@
             </label>
         </div>
         <div id="difficulty">
-            <img id="left" src="https://cdn-icons-png.flaticon.com/512/271/271220.png" alt="">   
-            <h1>EASY</h1>
-            <img id="right" src="https://cdn-icons-png.flaticon.com/512/271/271220.png" alt="">   
+            <!-- <img id="left" src="https://cdn-icons-png.flaticon.com/512/271/271220.png" alt=""> -->
+            <h1 id="left" class="change-dif"><</h1>
+            <h1 id="dif-msg">EASY</h1>
+            <!-- <img id="right" src="https://cdn-icons-png.flaticon.com/512/271/271220.png" alt=""> -->
+            <h1 id="right" class="change-dif">></h1>
         </div>
         <button id="play-btn">PLAY</button>
     </div>
 
     <div id="game-screen">
-        <div id="cpu-board" class="board hover"></div>
-        <div id="user-board" class="board hover"></div>
-        <div id="bug-box"></div>
-        <button id="ready-btn">READY</button>
+        <p id="game-info"></p>
+        <p id="instructions">First <span class="action">click</span> on a bug to select it, then on a tile to place the
+            bug (clicked tile
+            corresponds to left/top of bug). Press <span class="action">'space'</span> to flip the bug horizontal. Press
+            <span class="action">'tab'</span> to <br><br>Once you have placed all your bugs, press <span
+                class='action'>'enter'</span> or <span class='action'>click ready</span> to start the game.</p>
+        <div id="boards">
+            <div id="cpu-board" class="board hover"></div>
+            <div id="user-board" class="board hover"></div>
+            <div id="bug-box"></div>
+            <button id="ready-btn">READY</button>
+        </div>
+        <h2 id="msg"></h2>
+        <button id="play-again">PLAY AGAIN</button>
     </div>
 </body>
 

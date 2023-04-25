@@ -1,33 +1,40 @@
 //======================================================== CONSTANTS ======================================================
-const MOVE_DELAY = 200;
+let MOVE_DELAY = 0;  // make a fast mode
+const BUG_NAMES = ['','','maggot', 'ant', 'beetle', 'millipede']
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
 const MODES = ['normal'];
+const ADJ_MOVES = [{ dr: 1, dc: 0 }, { dr: 0, dc: 1 }, { dr: -1, dc: 0 }, { dr: 0, dc: -1 }];
 
 //=================================================== STATE VARIABLES ===========================================================
 let mode = 0;
 let difficulty = 0;
+let fastMode = false;
+
 let cpuBoard;
 let userBoard;
 let cpuBugs;
 let userBugs;
 let selectedBug;
 let playing;
-let turn; // 1, -1
+let message;
+// let turn; // 1, -1
 let winner; // null, 1: user, -1: cpu
+
+// CPU algorithm variables 
+let targetBug;
+let prevShots;
+let prevShots2;
+let bugTally;
 
 //======================================================= CLASSES =================================================================
 class Cell {
     constructor(value, pos) {
-        this.value = value; // 0: empty, 1: hit, -1: miss
+        this.value = value; // 0: not shot at, 1: hit, -1: miss
         this.row = pos[0];
         this.col = pos[1];
         this.color = 'white';
         this.isOccupied = false;
-
         this.$ = $('<div class="cell"></div>');
-        // var el = document.createElement('div');
-        // el.classList.add('cell');
-        // this.el = el;
         this.bug; // bug that is covering cell 
     }
 }
@@ -36,11 +43,7 @@ class Bug {
     constructor(size) {
         this.size = size; // 5, 4, 3, or 2
         this.orient = 1; // 1: vertical, -1: horizontal
-
         this.$ = $(`<img src="Icons/${size}er.png" class="bug ${size}">`);
-        // this.el = document.createElement('img');
-        // this.el.setAttribute('src', `Icons/${size}er.png`);
-        // this.el.classList.add('bug', `${size}`);
         this.row; // top row
         this.col; // left column 
         this.hits = 0; // total hits
@@ -56,64 +59,74 @@ const $radioButtons = $('.radio-btn');
 const $gameScreen = $('#game-screen');
 const $userBoard = $('#user-board');
 const $cpuBoard = $('#cpu-board');
-// const userBoardEl = document.getElementById('user-board');
-// const cpuBoardEl = document.getElementById('cpu-board');
-
 const $bugBox = $('#bug-box');
 
 //====================================================== EVENT LISTENERS ================================================
-$('#difficulty').on('click', 'img', changeDifficulty);
+$('#difficulty').on('click', 'h1', changeDifficulty); // set up
 $('#play-btn').on('click', play);
-$('#ready-btn').on('click', startGame);
-$bugBox.on('click', '.bug', selectBug);
-$(document).on('keyup', delegateEvent);
 
+$bugBox.on('click', '.bug', selectBug);                // place bugs
 $userBoard.on('click', '.cell', placeBug);
-$cpuBoard.on('click', '.cell', userShot);
-// $('#user-board').on('click', '.cell', placeBug); 
-// $('#cpu-board').on('click', '.cell', userShot);
+$('#ready-btn').on('click', startGame);
+
+$cpuBoard.on('click', '.cell', userShot);              // game play
+
+$('#play-again').on('click', init);                  // play again
+
+$(document).on('keyup', delegateEvent);                // general
+
+
+// TESTING 
+//play();
 
 //====================================================== SET UP =====================================================
 function changeDifficulty() {
     switch ($(this)[0].id) {
         case 'right':
-            if (difficulty < 2) {
+            if (difficulty === 0 || difficulty === 1) {
                 difficulty++;
-                $('#difficulty>h1').html(`${DIFFICULTIES[difficulty]}`);
+                $('#difficulty>#dif-msg').html(`${DIFFICULTIES[difficulty]}`);
             }
             break;
         case 'left':
-            if (difficulty > 0) {
+            if (difficulty === 1 || difficulty === 2) {
                 difficulty--;
-                $('#difficulty>h1').html(`${DIFFICULTIES[difficulty]}`);
+                $('#difficulty>#dif-msg').html(`${DIFFICULTIES[difficulty]}`);
             }
             break;
     }
 }
 
 function play() {
+    if ($('#fast-check')[0].checked) fastMode = true;
     let checkedEl;
     $radioButtons.each((i, btnEl) => {
         if (btnEl.checked) checkedEl = btnEl;
     });
-    mode = MODES[MODES.findIndex(MODE => MODE === checkedEl.id)];
+    mode = MODES.findIndex(MODE => MODE === checkedEl.id);
+    if (mode !== 0) {
+        alert('Oops! Sorry, this game mode is not available yet...');
+        return;
+    }
+    if (difficulty !== 0) {
+        alert('Oops! Sorry, this difficulty is not available yet...');
+        return;
+    }
     $startScreen.css({ display: 'none' });
     init();
 }
 
-function startGame() { 
-    if (allBugsPlaced(userBugs)) {
-        playing = true;
-        $('#ready-btn').css({display: 'none'});
-        render();
-    }
+function startGame() {
+    playing = true;
+    render();
 }
 
 //====================================================== INITIALIZATION ===================================================
 function init() {
-    // TODO: reset any DOM elements that may have changed 
-    $gameScreen.css({ display: 'flex' });
-    console.log(mode);
+    // TODO: reset any DOM elements and state variables that may have changed 
+    resetDOM();
+
+    
 
     // fill bugs array with the 5 new Bugs
     fillBugs();
@@ -121,16 +134,46 @@ function init() {
     initBoards();
     // randomize CPU bugs
     placeCpuBugs();
-    printBoard(cpuBoard); // TESTING 
 
     playing = false;
-    winner = null;
     selectedBug = null;
-    turn = 1; // do i need this??
+    message = 'Good luck!'
+    winner = null;
+    // turn = 1; // do i need this??
 
-    initialRender();
+    prevShots = [];
+    prevShots2 = { hits: [], misses: [] };
+    targetBug = false;
+    bugTally = [
+        { size: 2, tally: 0 },
+        { size: 3, tally: 0 },
+        { size: 3, tally: 0 },
+        { size: 4, tally: 0 },
+        { size: 5, tally: 0 }
+    ]
 
     render();
+
+    if (fastMode) {
+        placeUserBugs();
+        playing = true;
+        MOVE_DELAY = 0;
+        render();
+    }
+}
+
+function resetDOM() {
+    removeAllChildNodes($cpuBoard[0]);
+    removeAllChildNodes($userBoard[0]);
+    removeAllChildNodes($bugBox[0]);
+
+    $cpuBoard.on('click', '.cell', userShot);
+    $cpuBoard.addClass('hover');
+    $cpuBoard.css({display: 'none'});
+    $userBoard.addClass('hover');
+    $bugBox.css({display: 'flex'});
+    $('#play-again').css({display: 'none'});
+    $('#msg').html('');
 }
 
 // fill bugs array with the 5 bugs
@@ -159,6 +202,7 @@ function initBoards() {
     }
 }
 
+// TODO: getFancy(howFancy), weird placements to throw off user
 // randomize cpu bugs
 function placeCpuBugs() {
     let b = 4
@@ -198,7 +242,6 @@ function placeCpuBugs() {
 
 // FOR TESTING! RANDOMLY PLACES USER BUGS
 function placeUserBugs() {
-    console.log('place bugs randomly')
     let b = 4
     while (b >= 0) {
         var r = Math.floor(Math.random() * 10);
@@ -225,12 +268,18 @@ function placeUserBugs() {
                         userBoard[r][i].bug = userBugs[b];
                         userBugs[b].cellsOn.push(userBoard[r][i]);
                     }
+                    userBugs[b].$.removeClass('vertical').addClass('horizontal');
                     userBugs[b].row = r;
                     userBugs[b].col = c;
                     b--;
                 }
                 break;
         }
+    }
+    if (allBugsPlaced(userBugs)) {
+        $('#ready-btn').css({ display: 'initial' });
+        $('#instructoins').css({ display: 'none' });
+        $bugBox.css({ display: 'none' });
     }
 }
 
@@ -246,30 +295,16 @@ function selectBug() {
         selectedBug = userBugs.find(bug => bug.$[0] === $bug[0]);
     }
 }
-// function selectBug() {
-//     const bugEl = $(this)[0];
-//     if (bugEl.classList.contains('selected')) {                          // DESELECT
-//         selectedBug = null;
-//         bugEl.classList.remove('selected');
-//     } else {
-//         if (selectedBug) selectedBug.el.classList.remove('selected');   // DESELECT then SELECT
-//         selectedBug = userBugs.find(bug => bug.el === bugEl);
-//         bugEl.classList.add('selected');
-//     }
-// }
 
-// TODO: make sure you cant rotate after the bug is placed
 function rotateBug(bug) {
-    if (bug.orient === 1) {
-        bug.$.removeClass('vertical').addClass('horizontal');
-        // bug.el.classList.remove('vertical');
-        // bug.el.classList.add('horizontal');
-    } else {
-        bug.$.removeClass('horizontal').addClass('vertical');
-        // bug.el.classList.remove('horizontal');
-        // bug.el.classList.add('vertical');
+    if (!bug.isPlaced) {
+        if (bug.orient === 1) {
+            bug.$.removeClass('vertical').addClass('horizontal');
+        } else {
+            bug.$.removeClass('horizontal').addClass('vertical');
+        }
+        bug.orient *= (-1);
     }
-    bug.orient *= (-1);
 }
 
 function placeBug() {
@@ -288,8 +323,6 @@ function placeBug() {
                     selectedBug.cellsOn.push(userBoard[i][c]);
                 }
                 selectedBug.$.css({ gridArea: `${r + 1} / ${c + 1} / ${r + 1 + l} / ${c + 1}` });
-                // selectedBug.$.css({ gridColumn: `${selectedBug.col + 1}`, gridRrow: `${selectedBug.row + 1} / span ${selectedBug.size}` });
-                // selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1}; grid-row: ${selectedBug.row + 1} / span ${selectedBug.size};`);
             } else {
                 for (let i = c; i < c + l; i++) {
                     userBoard[r][i].isOccupied = true;
@@ -297,18 +330,22 @@ function placeBug() {
                     selectedBug.cellsOn.push(userBoard[r][i]);
                 }
                 selectedBug.$.css({ gridArea: `${r + 1} / ${c + 1} / ${r + 1} / ${c + 1 + l}` });
-                // selectedBug.$.css({ gridColumn: `${selectedBug.col + 1} / span ${selectedBug.size}`, gridRow: `${selectedBug.row + 1}` });
-                // selectedBug.el.setAttribute('style', `grid-column: ${selectedBug.col + 1} / span ${selectedBug.size}; grid-row: ${selectedBug.row + 1};`);
             }
             $userBoard.append(selectedBug.$);
-            $userBoard.append(selectedBug.$);
             selectedBug.$.removeClass('selected');
-            // userBoardEl.append(selectedBug.el);
-            // userBoardEl.append(selectedBug.el);
-            // selectedBug.el.classList.remove('selected');
             selectedBug.isPlaced = true;
+            selectedBug = null;
         }
     }
+    if (allBugsPlaced(userBugs)) {
+        $('#ready-btn').css({ display: 'initial' });
+        $('#instructoins').css({ display: 'none' });
+        $bugBox.css({ display: 'none' });
+    }
+}
+
+function undoPlacement() {
+    // TODO...
 }
 
 function userShot() {
@@ -320,11 +357,14 @@ function userShot() {
         if (isHit(cpuBoard, cell)) {                  // HIT
             cell.value = 1;
             cell.bug.hits++;
+            message = 'You hit a bug!';
             if (cell.bug.hits === cell.bug.size) {   // SQUASHED
                 cell.bug.isSquashed = true;
+                message = `You squashed a ${BUG_NAMES[cell.bug.size]}!`;
             }
         } else {                                     // MISS
             cell.value = -1;
+            message = 'You missed!';
         }
         turn = -1;
         winner = getWinner();
@@ -352,19 +392,27 @@ function cpuShot() {
             break;
     }
     if (isHit(userBoard, targetCell)) {                      // HIT
+        targetBug = true;  // for cpu algorithm 
         targetCell.value = 1;
         targetCell.bug.hits++;
+        message = 'Ouch!';
         if (targetCell.bug.hits === targetCell.bug.size) {   // SQUASHED
             targetCell.bug.isSquashed = true;
+            targetBug = false;
+            message = "That one's gonna hurt..."
         }
     } else {                                                 // MISS
         targetCell.value = -1;
+        message = 'That was a close one!'
     }
 
     turn = 1;
     winner = getWinner();
     render();
     if (!winner) $('#cpu-board').on('click', '.cell', userShot);
+    // console.log('===========================================');         //TESTING
+    // printBoard(userBoard);
+    // console.log(targetBug);
 }
 
 function delegateEvent(e) {
@@ -376,60 +424,68 @@ function delegateEvent(e) {
             playing = true;
             render();
             break;
-        case 39: // right arrow to randomly place bugs
-            placeUserBugs();
-            playing = true;
-            render();
-            break;
+        case 13:
+            if (playing === undefined) {
+                play();
+                break;
+            }
+            if (playing === false) {
+                if (allBugsPlaced(userBugs)) startGame();
+                break;
+            }
+            if (winner) {
+                init();
+                break;
+            }
     }
 
 }
 
 //================================================== RENDERERS ============================================================
+
+function render() {
+    if (!playing) initialRender();
+    renderBoards();
+    renderBugs();
+    if (winner) renderGameOver();
+    renderMsgs();
+}
+
 function initialRender() {
     if (!playing) {
         userBugs.forEach(bug => {                   // ADD bugs to box
             bug.$.addClass('vertical');
             $bugBox.append(bug.$);
-            // bug.el.classList.add('vertical');
-            // $bugBox.append(bug.el);
         });
         cpuBoard.forEach(row => {                   // ADD cells to boards
             row.forEach(cell => {
                 addCelltoBoard($cpuBoard, cell);
-                // addCelltoBoard(cpuBoardEl, cell);
             });
         });
         userBoard.forEach(row => {
             row.forEach(cell => {
                 addCelltoBoard($userBoard, cell);
-                // addCelltoBoard(userBoardEl, cell);
             });
         });
     }
 }
 
-function render() {
-    renderBoards();
-    renderBugs();
-    renderGameOver();
-}
-
-// TODO: move the r,c setting and appending to an initializer so its not 
 function renderBoards() {
+    $gameScreen.css({ display: 'flex' });
     if (playing) {                                  // HOVER
-        $cpuBoard.css({display: 'grid'});
+        $cpuBoard.css({ display: 'grid' });
         $userBoard.removeClass('hover');
-        // userBoardEl.classList.remove('hover');
-        $bugBox.toggle();
+        $bugBox.css({ display: 'none' });
         cpuBoard.forEach(row => {
             row.forEach(cell => {
                 if (cell.value === 1) {
+                    // cell.$.removeClass('hover').addClass('hit');
                     cell.$.css({ backgroundColor: 'red' });
                     // cell.el.style.backgroundColor = 'red';
                 }
                 if (cell.value === -1) {
-                    cell.$.css({ backgroundColor: 'green' });
+                    // cell.$.removeClass('hover').addClass('miss');
+                    cell.$.css({ backgroundColor: '#4DCCBD' });
                     // cell.el.style.backgroundColor = 'green';
                 }
             });
@@ -437,68 +493,189 @@ function renderBoards() {
         userBoard.forEach(row => {
             row.forEach(cell => {
                 if (cell.value === 1) {
+                    // cell.$.removeClass('hover').addClass('hit');
                     cell.$.css({ backgroundColor: 'red', zIndex: '1' });
-                    // cell.el.style.backgroundColor = 'red';
-                    // cell.el.style.zIndex = '1';
                 }
                 if (cell.value === -1) {
-                    cell.$.css({ backgroundColor: 'green', zIndex: '1' });
-                    // cell.el.style.backgroundColor = 'green';
-                    // cell.el.style.zIndex = '1';
+                    // cell.$.removeClass('hover').addClass('miss');
+                    cell.$.css({ backgroundColor: '#4DCCBD', zIndex: '1' });
                 }
             });
         });
     }
 }
 
-// TODO: wtf is going on with these horizontals (classes are added/removed in rotateBug)
+// hor/vert classes are added/removed in rotateBug
 function renderBugs() {
     if (playing) {
         userBugs.forEach(bug => {
             if (bug.orient === 1) { // vertical
                 bug.$.css({ gridColumn: `${bug.col + 1}`, gridRow: `${bug.row + 1} / span ${bug.size}` });
-                // bug.el.classList.add('vertical');
-                // bug.el.setAttribute('style', `grid-column: ${bug.col + 1}; grid-row: ${bug.row + 1} / span ${bug.size};`);
-                // userBoardEl.append(bug.el);
             } else { // horizontal (-1)
                 bug.$.css({ gridColumn: `${bug.col + 1} / span ${bug.size}`, gridRow: `${bug.row + 1}` });
-                // bug.el.classList.add('horizontal');
-                // bug.el.setAttribute('style', `grid-column: ${bug.col + 1} / span ${bug.size}; grid-row: ${bug.row + 1};`);
-                // userBoardEl.append(bug.el);
             }
             $userBoard.append(bug.$);
         });
     }
 }
 
-function renderGameOver() {
-    if (winner) {                                 
-        $cpuBoard.off('click');
-        let $winMsg;
-        switch (winner) {
-            case 1: 
-                $winMsg = $('<h1>YOU WIN!</h1>');
-                break;
-            case -1:
-                $winMsg = $('<h1>CPU WINS :(</h1>');
-                break;
-        }
-        $gameScreen.append($winMsg);
+function renderMsgs() {
+    $('#game-info').html(`Mode: ${MODES[mode]} &nbsp &nbsp Difficulty: ${DIFFICULTIES[difficulty].toLowerCase()}`);
+    $('#instructions').html("First <span class='action'>click</span> on a bug to select it, then on a tile to place the bug (clicked tilecorresponds to left/top of bug). Press <span class='action'>'space'</span> to flip the bug horizontal. Press <span class='action'>'tab'</span> to <br><br>Once you have placed all your bugs, press <span class='action'>'enter'</span> or <span class='action'>click ready</span> to start the game.");
+    if (playing) {
+        $('#ready-btn').css({ display: 'none' });
+        $('#msg').html(`${message}`);
+        $('#instructions').html("<span class='action'>Click</span> on a cell in your opponent's board to stomp!")
     }
 }
 
+function renderGameOver() {
+    $cpuBoard.off('click');
+    $('.hover').removeClass('hover');
+    switch (winner) {
+        case 1:
+            message = 'You win!'
+            break;
+        case -1:
+            message = 'Better luck next time! '
+            break;
+    }
+    $('#play-again').toggle();
+}
+
+//============================================== CPU ALGORITHMS =========================================
+function easySelect() {
+    let targetCell;
+    if (!targetBug) {
+        targetCell = randomSelect();
+    } else {
+        targetCell = adjacentSelect();
+    }
+
+    prevShots.unshift(targetCell);
+    return targetCell;
+}
+
+function mediumSelect() {
+    let targetCell;
+    if (!targetBug) {
+        targetCell = huntSelect();
+    } else {
+        targetCell = targetSelect();
+    }
+    if (isHit(userBoard, targetCell)) {
+        prevShots2.hits.unshift(targetCell);    // could also do {cell: targetCell, targetBug: targetBug} 
+        return targetCell;
+    } else {
+        prevShots2.misses.unshift(targetCell);
+        return targetCell;
+    }
+}
+
+function hardSelect() {
+
+}
+
 //================================================ HELPERS ================================================================
+function targetSelect() { //just for one bug now, then account for others
+    const hitCells = prevShots.filter(shotCell => shotCell.value === 1);
+    // if hitCells.length - tot size squashed bugs = 1 -> adjacent select
+    // TODO... 
+    // attack linearly until (squash or reach end of line)
+    // if reach end of line change axis and go back through line -> 1
+    // when squash, if the total size of squashed bugs != total hits
+    // find lone hit(s)
+    // else target select turns off 
+
+}
+
+function findLoneHit() {
+    // TODO...
+    // prioritize hitCells with the least explored adjacents 
+    // explore their adjacents until find a hit
+    // if that hit is not a squash
+    // put those two cells at the front of the line (or however you implement target cell)
+    // continue with target select
+    // else if the total size of squashed bugs != total hits
+    // find lone hit(s)
+    // else target select turns off
+}
+
+function huntSelect() {
+    let cell;
+    let i = 0;
+    while (i < 500) {
+        // select random cell
+        var r = 2 * Math.floor(Math.random() * 5);
+        var c = 2 * Math.floor(Math.random() * 5);
+        cell = userBoard[r][c];
+        if (cell.value === 0 && !adjsHasVal(cell, -1)) { // need to make sure we dont shoot adjacent to a miss, if it hasn't been shot at yet
+            return cell;
+        }
+    }
+    return randomSelect();          // in case theoretically there is some layout where we must shoot adjacent to a miss 
+}
+
+// very dumb algorithm, easily tricked
+function adjacentSelect() {
+    const lastHitCell = prevShots.find(shotCell => shotCell.value === 1);
+    if (!adjsHasVal(lastHitCell, 0)) {       // for the case we reach end of the bug
+        const hitCells = prevShots.filter(shotCell => shotCell.value === 1);
+        let otherHit = hitCells.find(hitCell => {
+            if (adjsHasVal(hitCell, 0)) {
+                return true;
+            }
+        });
+        return selectAdjTarget(otherHit);
+    }
+    return selectAdjTarget(lastHitCell);
+}
+
+function selectAdjTarget(cell) {
+    let INF = 0;
+    while (true) {
+        const dir = ADJ_MOVES[Math.floor(Math.random() * 4)];
+        const r = cell.row + dir.dr;
+        const c = cell.col + dir.dc;
+        // if it is in the board and it hasn't been shot at yet
+        if (r < 10 && r >= 0 && c < 10 && c >= 0 && userBoard[r][c].value === 0) return userBoard[r][c];
+
+        //TESTING
+        INF++;
+        if (INF > 100) {
+            console.log('infinite loop');
+            break;
+        }
+    }
+}
+
+function randomSelect() {
+    let cell;
+    while (true) {
+        // select random cell
+        var r = Math.floor(Math.random() * 10);
+        var c = Math.floor(Math.random() * 10);
+        cell = userBoard[r][c];
+        if (cell.value === 0) return cell // if it hasn't been shot at yet
+    }
+}
+
+// returns true if any of cell's adjacent cells have value
+function adjsHasVal(cell, val) {
+    return ADJ_MOVES.some(dir => {
+        const r = cell.row + dir.dr;
+        const c = cell.col + dir.dc;
+        if (r < 10 && r >= 0 && c < 10 && c >= 0) {
+            if (userBoard[r][c].value === val) return true;
+        }
+    });
+}
+
 function addCelltoBoard($board, cell) {
     cell.$.attr('id', `r${cell.row}c${cell.col}`);
     cell.$.css({ gridColumn: `${cell.col + 1} / ${cell.col + 2}`, gridRow: `${cell.row + 1} / ${cell.row + 2}` });
     $board.append(cell.$);
 }
-// function addCelltoBoard(boardEl, cell) {
-//     cell.el.setAttribute('id', `r${cell.row}c${cell.col}`)
-//     cell.el.style.gridColumn = `${cell.col + 1} / ${cell.col + 2}`;
-//     cell.el.style.gridRow = `${cell.row + 1} / ${cell.row + 2}`;
-//     boardEl.append(cell.el);
-// }
 
 function getWinner() {
     if (cpuBugs.every(bug => bug.isSquashed)) {
@@ -507,29 +684,6 @@ function getWinner() {
         return -1;
     }
     return null;
-}
-
-function easySelect() {
-    let validMove = false;
-    let cell;
-    while (!validMove) {
-        // select random cell
-        var r = Math.floor(Math.random() * 10);
-        var c = Math.floor(Math.random() * 10);
-        cell = userBoard[r][c];
-        if (cell.value === 0) { // if it hasn't been shot at yet
-            validMove = true;
-        }
-    }
-    return cell;
-}
-
-function mediumSelect() {
-
-}
-
-function hardSelect() {
-
 }
 
 function isValidPos(board, bug, r, c) {
@@ -576,10 +730,20 @@ function printBoard(board) {
     board.forEach((row, r) => {
         modBoard.push([]);
         row.forEach(cell => {
-            if (cell.isOccupied) {
-                modBoard[r].push('X');
-            } else {
-                modBoard[r].push(' ');
+            switch (cell.value) {
+                case 1:
+                    modBoard[r].push('1');
+                    break;
+                case -1:
+                    modBoard[r].push('0');
+                    break;
+                case 0:
+                    if (cell.isOccupied) {
+                        modBoard[r].push('X');
+                    } else {
+                        modBoard[r].push(' ');
+                    }
+                    break;
             }
         });
     });
@@ -590,4 +754,10 @@ function printBoard(board) {
 
 function allBugsPlaced(bugs) {
     return bugs.every(bug => bug.isPlaced);
+}
+
+function removeAllChildNodes(parent) {
+    while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
+    }
 }

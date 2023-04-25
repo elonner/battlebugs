@@ -7,6 +7,7 @@ Battle Bugs! Instead of ships, bugs. Could be unique and fun with cool animation
 * Playable/rendered in browser
 * Use jQuery
 * Follows organization structure as outlined below
+* Decent UI
 * Different CPU difficulties 
 * Different game modes
 * Cool method to place bugs
