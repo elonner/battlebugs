@@ -18,6 +18,7 @@
 
 #fast-mode {
     font-weight: 100;
+    margin-top: 0.5vmin;
 }
 
 #start-screen>h1 {
@@ -56,7 +57,8 @@
 #right:hover,
 #play-btn,
 #fast-check,
-#game-mode * {
+#game-mode *,
+#show-instructions:hover {
     cursor: pointer;
 }
 
@@ -80,6 +82,19 @@
 #play-btn:hover {
     color: #D6FFF6;
     background-color: #4DCCBD;
+}
+
+#show-instructions {
+    font-size: 1em;
+    font-weight: 300;
+    text-align: center;
+}
+
+#mode-instructions {
+    font-size: 1em;
+    font-weight: 100;
+    text-align: center;
+
 }
 
 /* \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ BUG PLACEMENT \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ */
@@ -128,6 +143,8 @@
     grid-template-rows: repeat(10, 4vmin);
     gap: 0.2vmin;
     place-items: center;
+    padding: 3vmin;
+    border-radius: 10%;
 }
 
 #bug-box {
@@ -156,27 +173,80 @@
     background-color: #2374AB;
 }
 
-.cell {
-    background-color: #ffb4b4;
-    width: 100%;
-    height: 100%;
-}
-
 #cpu-board {
     display: none;
+    background-color: #ffd0d0;
+    border: 0.3vmin solid #ee9797;
+    transition: 150ms;
 }
 
-.hover > .cell:hover {
+#cpu-board.shrink {
+    grid-template-columns: repeat(10, 2vmin);
+    grid-template-rows: repeat(10, 2vmin);
+    transition: 150ms;
+    align-self: end;
+}
+
+#user-board {
+    background-color: #b1e0ff;
+    border: 0.3vmin solid #7ab5dc;
+    transition: 150ms;
+}
+
+#user-board.shrink {
+    grid-template-columns: repeat(10, 2vmin);
+    grid-template-rows: repeat(10, 2vmin);
+    transition: 150ms;
+    align-self: end;
+}
+
+.cell {
+    width: 100%;
+    height: 100%;
+    border-radius: 20%;
+    --animate-duration: 150ms;
+}
+
+#cpu-board>.cell {
+    background-color: #ee9797;
+    border: 0.3vmin solid #ca7b7b;
+}
+
+#user-board>.cell {
+    background-color: #7ab5dc;
+    border: 0.3vmin solid #5f98bf;
+}
+
+#user-board.hover > .cell:hover {
+    background-color: #85c4ee;
+}
+
+#user-board.hover > .cell:active {
+    background-color: #7ab5dc;
+}
+
+#cpu-board.hover > .cell:hover {
     background-color: #ffa4a4;
 }
 
-.hover > .cell:active {
+#cpu-board.hover > .cell:active {
     background-color: #e99393;
 }
 
 .bug {
     margin: 0.5vmin;
     width: 3.7vmin;
+    border-radius: 1.85vmin;
+    border: 0.3vmin solid #4DCCBD;
+    transition: 150ms;
+}
+
+.bug.shrink {
+    margin: 0.25vmin;
+    width: 1.85vmin;
+    border-radius: 0.93vmin;
+    border: 0.15vmin solid #4DCCBD;
+    transition: 150ms;
 }
 
 .bug.horizontal {

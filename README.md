@@ -4,16 +4,19 @@
 Battle Bugs! Instead of ships, bugs. Could be unique and fun with cool animations.
 
 ### Priorities:
-* Playable/rendered in browser
-* Use jQuery
-* Follows organization structure as outlined below
-* Decent UI
-* Different CPU difficulties 
-* Different game modes
+* ~~Playable/rendered in browser~~
+* ~~Use jQuery~~
+* ~~Follows organization structure as outlined below~~
+* ~~Decent UI~~
+* 2 CPU difficulties 
+* 2 game modes
 * Cool method to place bugs
-* Playable only with keyboard
+* Playable only with keyboard and only with mouse 
 * Making game pretty 
 * Animations & Sounds 
+* 3rd difficulty
+* More game modes
+* More functionality as I learn full-stack
 
 ## Organization:
 

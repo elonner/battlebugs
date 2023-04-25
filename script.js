@@ -1,5 +1,5 @@
 //======================================================== CONSTANTS ======================================================
-let MOVE_DELAY = 0;  // make a fast mode
+let MOVE_DELAY = 2000;  // make a fast mode
 const BUG_NAMES = ['', '', 'maggot', 'ant', 'beetle', 'millipede']
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
 const MODES = ['normal'];
@@ -8,6 +8,7 @@ const ADJ_MOVES = [{ dr: 1, dc: 0 }, { dr: 0, dc: 1 }, { dr: -1, dc: 0 }, { dr: 
 //=================================================== STATE VARIABLES ===========================================================
 let mode = 0;
 let difficulty = 0;
+let instructionsHidden = true;
 let fastMode = false;
 
 let cpuBoard;
@@ -18,7 +19,6 @@ let selectedBug;
 let placedBugs;
 let playing;
 let message;
-// let turn; // 1, -1
 let winner; // null, 1: user, -1: cpu
 
 // CPU algorithm variables 
@@ -65,6 +65,7 @@ const $bugBox = $('#bug-box');
 //====================================================== EVENT LISTENERS ================================================
 $('#difficulty').on('click', 'h1', changeDifficulty); // set up
 $('#play-btn').on('click', play);
+$('#show-instructions').on('click', showInstructions);
 
 $bugBox.on('click', '.bug', selectBug);                // place bugs
 $userBoard.on('click', '.cell', placeBug);
@@ -75,10 +76,6 @@ $cpuBoard.on('click', '.cell', userShot);              // game play
 $('#play-again').on('click', init);                  // play again
 
 $(document).on('keyup', delegateEvent);                // general
-
-
-// TESTING 
-//play();
 
 //====================================================== SET UP =====================================================
 function changeDifficulty() {
@@ -119,16 +116,41 @@ function play() {
 
 function startGame() {
     playing = true;
+    $userBoard.off('click');
     render();
+}
+
+function showInstructions() {
+    let checkedEl;
+    const $modeInstr = $('#mode-instructions');
+    $radioButtons.each((i, btnEl) => {
+        if (btnEl.checked) checkedEl = btnEl;
+    });
+    mode = MODES.findIndex(MODE => MODE === checkedEl.id);
+    if (mode !== 0) {
+        alert('Oops! Sorry, this game mode is not available yet...');
+    }
+    if (!instructionsHidden) {
+        $modeInstr.html('');
+        instructionsHidden = true;
+    } else {
+        switch (mode) {
+        case 0:
+            $modeInstr.html(`Normal battleship rules. Place your bugs wherever you want.<br>During game, select the cell on your opponent's board where you would like to "stomp."<br>Your opponent will let you know which bug you have squashed if your shot happens to squash a bug.<br>First one to squash all of the other's bugs wins!`)
+            instructionsHidden = false;
+            break;
+        case 1:
+            break;
+        case 2:
+            break;
+        }
+    }
 }
 
 //====================================================== INITIALIZATION ===================================================
 function init() {
-    // TODO: reset any DOM elements and state variables that may have changed 
+    // reset any DOM elements that may have changed in a previous game
     resetDOM();
-
-
-
     // fill bugs array with the 5 new Bugs
     fillBugs();
     // fill the boards with new empty cells
@@ -141,7 +163,6 @@ function init() {
     placedBugs = [];
     message = 'Good luck!'
     winner = null;
-    // turn = 1; // do i need this??
 
     prevShots = [];
     prevShots2 = { hits: [], misses: [] };
@@ -173,6 +194,8 @@ function resetDOM() {
     $cpuBoard.addClass('hover');
     $cpuBoard.css({ display: 'none' });
     $userBoard.addClass('hover');
+    $userBoard.removerClass('shrink');
+    $cpuBoard.removerClass('shrink');
     $bugBox.css({ display: 'flex' });
     $('#play-again').css({ display: 'none' });
     $('#msg').html('');
@@ -393,11 +416,19 @@ function userShot() {
             cell.value = -1;
             message = 'You missed!';
         }
+        animateCSS(cell.$[0], 'flip');
         turn = -1;
         winner = getWinner();
         render();
-        // CPU turn
+        // animate turn and switch turns
         if (!winner) {
+            if (!fastMode) {
+                $('#user-board>.bug').each((i, bugEl) => bugEl.classList.remove('shrink'));
+                $userBoard.removeClass('shrink');
+                setTimeout(() => {
+                    $cpuBoard.addClass('shrink');
+                }, 150);
+            }
             //make sure user can't move when CPU turn 
             $('#cpu-board').off('click');
             setTimeout(cpuShot, MOVE_DELAY);
@@ -406,6 +437,15 @@ function userShot() {
 }
 
 function cpuShot() {
+    if (!fastMode) {
+        setTimeout(() => {
+            $cpuBoard.removeClass('shrink');
+            setTimeout(() => {
+                $userBoard.addClass('shrink');
+                $('#user-board>.bug').each((i, bugEl) => bugEl.classList.add('shrink'));
+            }, 150);
+        }, 0.5*MOVE_DELAY);
+    }
     let targetCell;
     switch (difficulty) {
         case 0:
@@ -432,11 +472,14 @@ function cpuShot() {
         targetCell.value = -1;
         message = 'That was a close one!'
     }
+    animateCSS(targetCell.$[0], 'flip');
 
     turn = 1;
     winner = getWinner();
     render();
-    if (!winner) $('#cpu-board').on('click', '.cell', userShot);
+    if (!winner) {
+        $('#cpu-board').on('click', '.cell', userShot);
+    }
     // console.log('===========================================');         //TESTING
     // printBoard(userBoard);
     // console.log(targetBug);
@@ -787,6 +830,17 @@ function removeAllChildNodes(parent) {
         parent.removeChild(parent.firstChild);
     }
 }
+
+//adds the animation class to an element then removes it when done
+function animateCSS(element, animation, prefix = 'animate__') {
+    const animationName = `${prefix}${animation}`;
+    element.classList.add(`${prefix}animated`, animationName);
+    element.addEventListener('animationend', function (e) {
+        e.stopPropagation();
+        element.classList.remove(`${prefix}animated`, animationName);
+    });
+}
+
 
 /* Questions:
 
