@@ -1,6 +1,6 @@
 //======================================================== CONSTANTS ======================================================
 let MOVE_DELAY = 0;  // make a fast mode
-const BUG_NAMES = ['','','maggot', 'ant', 'beetle', 'millipede']
+const BUG_NAMES = ['', '', 'maggot', 'ant', 'beetle', 'millipede']
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
 const MODES = ['normal'];
 const ADJ_MOVES = [{ dr: 1, dc: 0 }, { dr: 0, dc: 1 }, { dr: -1, dc: 0 }, { dr: 0, dc: -1 }];
@@ -15,6 +15,7 @@ let userBoard;
 let cpuBugs;
 let userBugs;
 let selectedBug;
+let placedBugs;
 let playing;
 let message;
 // let turn; // 1, -1
@@ -126,7 +127,7 @@ function init() {
     // TODO: reset any DOM elements and state variables that may have changed 
     resetDOM();
 
-    
+
 
     // fill bugs array with the 5 new Bugs
     fillBugs();
@@ -137,6 +138,7 @@ function init() {
 
     playing = false;
     selectedBug = null;
+    placedBugs = [];
     message = 'Good luck!'
     winner = null;
     // turn = 1; // do i need this??
@@ -169,10 +171,10 @@ function resetDOM() {
 
     $cpuBoard.on('click', '.cell', userShot);
     $cpuBoard.addClass('hover');
-    $cpuBoard.css({display: 'none'});
+    $cpuBoard.css({ display: 'none' });
     $userBoard.addClass('hover');
-    $bugBox.css({display: 'flex'});
-    $('#play-again').css({display: 'none'});
+    $bugBox.css({ display: 'flex' });
+    $('#play-again').css({ display: 'none' });
     $('#msg').html('');
 }
 
@@ -334,6 +336,7 @@ function placeBug() {
             $userBoard.append(selectedBug.$);
             selectedBug.$.removeClass('selected');
             selectedBug.isPlaced = true;
+            placedBugs.push(selectedBug);
             selectedBug = null;
         }
     }
@@ -345,7 +348,31 @@ function placeBug() {
 }
 
 function undoPlacement() {
-    // TODO...
+    let lastPlacedBug = placedBugs.pop();
+    lastPlacedBug.isPlaced = false;
+    let r = lastPlacedBug.row;
+    let c = lastPlacedBug.col;
+    let l = lastPlacedBug.size;
+    if (lastPlacedBug.orient === 1) {
+        for (let i = r; i < r + l; i++) {
+            userBoard[i][c].isOccupied = false;
+            userBoard[i][c].bug = null;
+        }
+        lastPlacedBug.cellsOn = [];
+        lastPlacedBug.$.css({ gridArea: `` });
+    } else {
+        for (let i = c; i < c + l; i++) {
+            userBoard[r][i].isOccupied = false;
+            userBoard[r][i].bug = null;
+        }
+        lastPlacedBug.cellsOn = [];
+        lastPlacedBug.$.css({ gridArea: `` });
+        rotateBug(lastPlacedBug);
+    }
+    $bugBox.append(lastPlacedBug.$);
+    $('#ready-btn').css({ display: 'none' });
+    $('#instructoins').css({ display: 'initial' });
+    $bugBox.css({ display: 'flex' });
 }
 
 function userShot() {
@@ -420,11 +447,10 @@ function delegateEvent(e) {
         case 32: // space 
             if (selectedBug && !playing) rotateBug(selectedBug);
             break;
-        case 80: // p to play
-            playing = true;
-            render();
+        case 8: // tab
+            if (!playing && placedBugs.length > 0) undoPlacement();
             break;
-        case 13:
+        case 13: // enter
             if (playing === undefined) {
                 play();
                 break;
@@ -521,7 +547,7 @@ function renderBugs() {
 
 function renderMsgs() {
     $('#game-info').html(`Mode: ${MODES[mode]} &nbsp &nbsp Difficulty: ${DIFFICULTIES[difficulty].toLowerCase()}`);
-    $('#instructions').html("First <span class='action'>click</span> on a bug to select it, then on a tile to place the bug (clicked tilecorresponds to left/top of bug). Press <span class='action'>'space'</span> to flip the bug horizontal. Press <span class='action'>'tab'</span> to <br><br>Once you have placed all your bugs, press <span class='action'>'enter'</span> or <span class='action'>click ready</span> to start the game.");
+    $('#instructions').html("First <span class='action'>click</span> on a bug to select it, then on a tile to place the bug (clicked tile corresponds to left/top of bug). Press <span class='action'>'space'</span> to flip the bug horizontal. Press <span class='action'>'backspace'</span> to undo placement.<br><br>Once you have placed all your bugs, press <span class='action'>'enter'</span> or <span class='action'>click ready</span> to start the game.");
     if (playing) {
         $('#ready-btn').css({ display: 'none' });
         $('#msg').html(`${message}`);
@@ -761,3 +787,15 @@ function removeAllChildNodes(parent) {
         parent.removeChild(parent.firstChild);
     }
 }
+
+/* Questions:
+
+I try to keep DOM manip and data manip separate, but what about functions that are small and simple but do both? 
+
+
+
+
+
+
+
+*/
