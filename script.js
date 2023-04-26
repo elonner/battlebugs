@@ -57,7 +57,7 @@ class Cell {
 
     setImg() {
         if (this.$.children().length === 0) {
-            const newImg = $('<img src="https://static.vecteezy.com/system/resources/thumbnails/009/344/496/small/x-transparent-free-png.png" class="cell">')
+            const newImg = $('<img src="https://static.vecteezy.com/system/resources/thumbnails/009/344/496/small/x-transparent-free-png.png" class="cell no-click">')
             this.$.append(newImg);
         }
     }
@@ -422,8 +422,7 @@ function undoPlacement() {
 }
 
 function userShot() {
-    if (playing) {
-        console.log($(this).hasClass('cell'));
+    if (playing && !$(this).hasClass('no-click')) {
         const r = parseInt($(this)[0].id[1]);
         const c = parseInt($(this)[0].id[3]);
         const cell = cpuBoard[r][c];
