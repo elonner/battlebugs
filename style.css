@@ -237,15 +237,14 @@
     margin: 0.5vmin;
     width: 3.7vmin;
     border-radius: 1.85vmin;
-    border: 0.3vmin solid #4DCCBD;
     transition: 150ms;
+    filter: drop-shadow(0 0 0.25vmin black);
 }
 
 .bug.shrink {
     margin: 0.25vmin;
     width: 1.85vmin;
     border-radius: 0.93vmin;
-    border: 0.15vmin solid #4DCCBD;
     transition: 150ms;
 }
 

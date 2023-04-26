@@ -1,6 +1,6 @@
 //======================================================== CONSTANTS ======================================================
 let MOVE_DELAY = 2000;  // make a fast mode
-const BUG_NAMES = ['', '', 'maggot', 'ant', 'beetle', 'millipede']
+const BUG_NAMES = ['', '', 'a fly', 'an ant', 'a cockroach', 'a millipede']
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
 const MODES = ['normal'];
 const ADJ_MOVES = [{ dr: 1, dc: 0 }, { dr: 0, dc: 1 }, { dr: -1, dc: 0 }, { dr: 0, dc: -1 }];
@@ -38,6 +38,13 @@ class Cell {
         this.$ = $('<div class="cell"></div>');
         this.bug; // bug that is covering cell 
     }
+
+    setImg() {
+        if (this.$.children().length === 0) {
+            const newImg = $('<img src="https://static.vecteezy.com/system/resources/thumbnails/009/344/496/small/x-transparent-free-png.png" class="cell">')
+            this.$.append(newImg);
+        }
+    }
 }
 
 class Bug {
@@ -51,6 +58,10 @@ class Bug {
         this.isSquashed = false; //css idea --> footprints then squashed animation
         this.cellsOn = []; // links to cells bug is covering
         this.isPlaced = false; // is it placed on the board already
+    }
+
+    setImg(imgSrc) {
+        this.$.attr('src', imgSrc);
     }
 }
 
@@ -194,8 +205,8 @@ function resetDOM() {
     $cpuBoard.addClass('hover');
     $cpuBoard.css({ display: 'none' });
     $userBoard.addClass('hover');
-    $userBoard.removerClass('shrink');
-    $cpuBoard.removerClass('shrink');
+    $userBoard.removeClass('shrink');
+    $cpuBoard.removeClass('shrink');
     $bugBox.css({ display: 'flex' });
     $('#play-again').css({ display: 'none' });
     $('#msg').html('');
@@ -410,7 +421,7 @@ function userShot() {
             message = 'You hit a bug!';
             if (cell.bug.hits === cell.bug.size) {   // SQUASHED
                 cell.bug.isSquashed = true;
-                message = `You squashed a ${BUG_NAMES[cell.bug.size]}!`;
+                message = `You squashed ${BUG_NAMES[cell.bug.size]}!`;
             }
         } else {                                     // MISS
             cell.value = -1;
@@ -549,7 +560,8 @@ function renderBoards() {
             row.forEach(cell => {
                 if (cell.value === 1) {
                     // cell.$.removeClass('hover').addClass('hit');
-                    cell.$.css({ backgroundColor: 'red' });
+                    //cell.$.css({ backgroundColor: 'red' });
+                    cell.setImg();
                     // cell.el.style.backgroundColor = 'red';
                 }
                 if (cell.value === -1) {
@@ -846,7 +858,7 @@ function animateCSS(element, animation, prefix = 'animate__') {
 
 I try to keep DOM manip and data manip separate, but what about functions that are small and simple but do both? 
 
-
+What can take this to the next level as far as me looking employable and professional? 
 
 
 
