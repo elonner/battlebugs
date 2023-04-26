@@ -22,10 +22,11 @@ let message;
 let winner; // null, 1: user, -1: cpu
 
 // CPU algorithm variables 
-let targetBug;
+// let targetBug;
 let prevShots;
-let prevShots2;
-let bugTally;
+let squashedBugs;
+let leExAdjs;
+let hitCells;
 
 //======================================================= CLASSES =================================================================
 class Cell {
@@ -37,6 +38,21 @@ class Cell {
         this.isOccupied = false;
         this.$ = $('<div class="cell"></div>');
         this.bug; // bug that is covering cell 
+    }
+
+    emptyAdjs() {
+        const adjVals = [];
+        ADJ_MOVES.forEach(dir => {
+            var r = this.row + dir.dr;
+            var c = this.col + dir.dc
+            if (r > 9 || r < 0 || c > 9 || c < 0) return;
+            adjVals.push(userBoard[r][c].value);
+        });
+        const emptyAdjs = adjVals.reduce((acc, val) => {
+            if (val === 0) return acc + 1;
+            else return acc;
+        }, 0);
+        return emptyAdjs;
     }
 
     setImg() {
@@ -117,7 +133,7 @@ function play() {
         alert('Oops! Sorry, this game mode is not available yet...');
         return;
     }
-    if (difficulty !== 0) {
+    if (difficulty === 2) {
         alert('Oops! Sorry, this difficulty is not available yet...');
         return;
     }
@@ -146,14 +162,14 @@ function showInstructions() {
         instructionsHidden = true;
     } else {
         switch (mode) {
-        case 0:
-            $modeInstr.html(`Normal battleship rules. Place your bugs wherever you want.<br>During game, select the cell on your opponent's board where you would like to "stomp."<br>Your opponent will let you know which bug you have squashed if your shot happens to squash a bug.<br>First one to squash all of the other's bugs wins!`)
-            instructionsHidden = false;
-            break;
-        case 1:
-            break;
-        case 2:
-            break;
+            case 0:
+                $modeInstr.html(`Normal battleship rules. Place your bugs wherever you want.<br>During game, select the cell on your opponent's board where you would like to "stomp."<br>Your opponent will let you know which bug you have squashed if your shot happens to squash a bug.<br>First one to squash all of the other's bugs wins!`)
+                instructionsHidden = false;
+                break;
+            case 1:
+                break;
+            case 2:
+                break;
         }
     }
 }
@@ -176,15 +192,10 @@ function init() {
     winner = null;
 
     prevShots = [];
-    prevShots2 = { hits: [], misses: [] };
-    targetBug = false;
-    bugTally = [
-        { size: 2, tally: 0 },
-        { size: 3, tally: 0 },
-        { size: 3, tally: 0 },
-        { size: 4, tally: 0 },
-        { size: 5, tally: 0 }
-    ]
+    leExAdjs = [];
+    hitCells = [];
+    // targetBug = false;
+    squashedBugs = [];
 
     render();
 
@@ -201,6 +212,7 @@ function resetDOM() {
     removeAllChildNodes($userBoard[0]);
     removeAllChildNodes($bugBox[0]);
 
+    $userBoard.on('click', '.cell', placeBug);
     $cpuBoard.on('click', '.cell', userShot);
     $cpuBoard.addClass('hover');
     $cpuBoard.css({ display: 'none' });
@@ -411,6 +423,7 @@ function undoPlacement() {
 
 function userShot() {
     if (playing) {
+        console.log($(this).hasClass('cell'));
         const r = parseInt($(this)[0].id[1]);
         const c = parseInt($(this)[0].id[3]);
         const cell = cpuBoard[r][c];
@@ -418,7 +431,7 @@ function userShot() {
         if (isHit(cpuBoard, cell)) {                  // HIT
             cell.value = 1;
             cell.bug.hits++;
-            message = 'You hit a bug!';
+            message = `You hit ${BUG_NAMES[cell.bug.size]}!`;
             if (cell.bug.hits === cell.bug.size) {   // SQUASHED
                 cell.bug.isSquashed = true;
                 message = `You squashed ${BUG_NAMES[cell.bug.size]}!`;
@@ -428,7 +441,6 @@ function userShot() {
             message = 'You missed!';
         }
         animateCSS(cell.$[0], 'flip');
-        turn = -1;
         winner = getWinner();
         render();
         // animate turn and switch turns
@@ -445,55 +457,6 @@ function userShot() {
             setTimeout(cpuShot, MOVE_DELAY);
         }
     }
-}
-
-function cpuShot() {
-    if (!fastMode) {
-        setTimeout(() => {
-            $cpuBoard.removeClass('shrink');
-            setTimeout(() => {
-                $userBoard.addClass('shrink');
-                $('#user-board>.bug').each((i, bugEl) => bugEl.classList.add('shrink'));
-            }, 150);
-        }, 0.5*MOVE_DELAY);
-    }
-    let targetCell;
-    switch (difficulty) {
-        case 0:
-            targetCell = easySelect();
-            break;
-        case 1:
-            targetCell = mediumSelect();
-            break;
-        case 2:
-            targetCell = hardSelect();
-            break;
-    }
-    if (isHit(userBoard, targetCell)) {                      // HIT
-        targetBug = true;  // for cpu algorithm 
-        targetCell.value = 1;
-        targetCell.bug.hits++;
-        message = 'Ouch!';
-        if (targetCell.bug.hits === targetCell.bug.size) {   // SQUASHED
-            targetCell.bug.isSquashed = true;
-            targetBug = false;
-            message = "That one's gonna hurt..."
-        }
-    } else {                                                 // MISS
-        targetCell.value = -1;
-        message = 'That was a close one!'
-    }
-    animateCSS(targetCell.$[0], 'flip');
-
-    turn = 1;
-    winner = getWinner();
-    render();
-    if (!winner) {
-        $('#cpu-board').on('click', '.cell', userShot);
-    }
-    // console.log('===========================================');         //TESTING
-    // printBoard(userBoard);
-    // console.log(targetBug);
 }
 
 function delegateEvent(e) {
@@ -560,7 +523,7 @@ function renderBoards() {
             row.forEach(cell => {
                 if (cell.value === 1) {
                     // cell.$.removeClass('hover').addClass('hit');
-                    //cell.$.css({ backgroundColor: 'red' });
+                    cell.$.css({ backgroundColor: 'red' });
                     cell.setImg();
                     // cell.el.style.backgroundColor = 'red';
                 }
@@ -576,6 +539,7 @@ function renderBoards() {
                 if (cell.value === 1) {
                     // cell.$.removeClass('hover').addClass('hit');
                     cell.$.css({ backgroundColor: 'red', zIndex: '1' });
+                    cell.setImg();
                 }
                 if (cell.value === -1) {
                     // cell.$.removeClass('hover').addClass('miss');
@@ -624,10 +588,56 @@ function renderGameOver() {
     $('#play-again').toggle();
 }
 
-//============================================== CPU ALGORITHMS =========================================
+//============================================== CPU TURN =========================================
+function cpuShot() {
+    let targetCell;
+    switch (difficulty) {
+        case 0:
+            targetCell = easySelect();
+            break;
+        case 1:
+            targetCell = mediumSelect();
+            break;
+        case 2:
+            targetCell = hardSelect();
+            break;
+    }
+    if (isHit(userBoard, targetCell)) {                      // HIT
+        // targetBug = true;  // for cpu algorithm 
+        targetCell.value = 1;
+        targetCell.bug.hits++;
+        message = 'Ouch!';
+        hitCells.unshift(targetCell);
+        if (targetCell.bug.hits === targetCell.bug.size) {   // SQUASHED
+            targetCell.bug.isSquashed = true;
+            squashedBugs.push(targetCell.bug);
+            // targetBug = false;
+            message = "That one's gonna hurt..."
+        }
+    } else {                                                 // MISS
+        targetCell.value = -1;
+        message = 'That was a close one!'
+    }
+    winner = getWinner();
+    if (!fastMode && !winner) {         // SHRINK and unshrink boards
+        setTimeout(() => {
+            $cpuBoard.removeClass('shrink');
+            setTimeout(() => {
+                $userBoard.addClass('shrink');
+                $('#user-board>.bug').each((i, bugEl) => bugEl.classList.add('shrink'));
+            }, 150);
+        }, 0.5 * MOVE_DELAY);
+    }
+    animateCSS(targetCell.$[0], 'flip');
+    render();
+    if (!winner) {
+        $('#cpu-board').on('click', '.cell', userShot);
+    }
+}
+
 function easySelect() {
     let targetCell;
-    if (!targetBug) {
+    if (targetCells() === 0) {
         targetCell = randomSelect();
     } else {
         targetCell = adjacentSelect();
@@ -639,69 +649,120 @@ function easySelect() {
 
 function mediumSelect() {
     let targetCell;
-    if (!targetBug) {
+    if (targetCells() === 0) {
         targetCell = huntSelect();
     } else {
         targetCell = targetSelect();
     }
-    if (isHit(userBoard, targetCell)) {
-        prevShots2.hits.unshift(targetCell);    // could also do {cell: targetCell, targetBug: targetBug} 
-        return targetCell;
-    } else {
-        prevShots2.misses.unshift(targetCell);
-        return targetCell;
-    }
+
+    prevShots.unshift(targetCell);
+    return targetCell;
 }
 
 function hardSelect() {
 
 }
 
-//================================================ HELPERS ================================================================
-function targetSelect() { //just for one bug now, then account for others
-    const hitCells = prevShots.filter(shotCell => shotCell.value === 1);
-    // if hitCells.length - tot size squashed bugs = 1 -> adjacent select
-    // TODO... 
-    // attack linearly until (squash or reach end of line)
-    // if reach end of line change axis and go back through line -> 1
-    // when squash, if the total size of squashed bugs != total hits
-    // find lone hit(s)
-    // else target select turns off 
+//================================================ CPU ALGORITHMS ================================================================
+function targetSelect() {
+    // return an empty cell adjacent to the hit cell with the least adjacents explored
+    if (targetCells() === 1) return selectAdjTarget(hitCells[0]);  // SORT hitCells
 
+    var r = hitCells[0].row;
+    var c = hitCells[0].col;
+    var dr = r - hitCells[1].row;
+    var dc = c - hitCells[1].col;
+    if (dr === 0) {
+        return lineSelect(r, c, true);
+    } else if (dc === 0) {
+        return lineSelect(r, c, false);
+    } else {
+        return selectAdjTarget(hitCells[0]);                       // SORT hitCells
+    }
+}
+
+function lineSelect(r, c, horiz) {
+    let line = [userBoard[r][c]];
+    let rIdx = 0;
+    let cIdx = 0;
+    let endOfDir = false;
+    let endOfLine = false;
+    if (horiz) cIdx++;
+    else rIdx++;
+    // returns an empty cell on the line of the two previous hits, if it exists
+    while (!endOfLine) {
+        if (isInbounds(r + rIdx, c + cIdx) && userBoard[r + rIdx][c + cIdx].value === 0) {        // if an empty cell
+            return userBoard[r + rIdx][c + cIdx];
+        } else if (isInbounds(r + rIdx, c + cIdx) && userBoard[r + rIdx][c + cIdx].value === 1) { // if a hit cell
+            line.push(userBoard[r + rIdx][c + cIdx]);
+            if (endOfDir) {
+                if (horiz) cIdx--;
+                else rIdx--;
+            } else {
+                if (horiz) cIdx++;
+                else rIdx++;
+            }
+            continue;
+        } else if (!endOfDir) {                                     // if reach boundary or miss
+            endOfDir = true;
+            if (horiz) cIdx = 0;
+            else rIdx = 0;
+        } else {
+            endOfLine = true;
+        }
+        if (endOfDir) {
+            if (horiz) cIdx--;
+            else rIdx--;
+        } else {
+            if (horiz) cIdx++;
+            else rIdx++;
+        }
+    }
+    // go back through line and check cross axis 
+    return crossAxSelect(line);
+}
+
+function crossAxSelect(line) {
+    line.forEach(cell => {
+        if (adjsHasVal(cell, 0)) { // find this cell in hit cells and move it to the front
+            foundIdx = hitCells.findIndex(hitCell => hitCell.row === cell.row && hitCell.col === cell.col);
+            hitCells.splice(foundIdx, 1);
+            hitCells.unshift(cell);
+            return selectAdjTarget(cell);
+        }
+    });
+    return findLoneHit();
 }
 
 function findLoneHit() {
-    // TODO...
-    // prioritize hitCells with the least explored adjacents 
-    // explore their adjacents until find a hit
-    // if that hit is not a squash
-    // put those two cells at the front of the line (or however you implement target cell)
-    // continue with target select
-    // else if the total size of squashed bugs != total hits
-    // find lone hit(s)
-    // else target select turns off
+    hitCells.sort((a, b) => b.emptyAdjs() - a.emptyAdjs());     // SORT hitCells
+    return selectAdjTarget(hitCells[0]);
 }
 
-function huntSelect() {
+function huntSelect(best = true) {
     let cell;
     let i = 0;
     while (i < 500) {
         // select random cell
-        var r = 2 * Math.floor(Math.random() * 5);
-        var c = 2 * Math.floor(Math.random() * 5);
-        cell = userBoard[r][c];
-        if (cell.value === 0 && !adjsHasVal(cell, -1)) { // need to make sure we dont shoot adjacent to a miss, if it hasn't been shot at yet
-            return cell;
+        var r = Math.floor(Math.random() * 10);
+        var c = Math.floor(Math.random() * 10);
+        if ((r + c) % 2 === 0) {
+            cell = userBoard[r][c];
+            // try to make sure we dont shoot adjacent to a miss, if it hasn't been shot at yet
+            if (best && cell.value === 0 && !adjsHasVal(cell, -1)) return cell;
+            else if (!best && cell.value === 0) return cell;
         }
+        i++;
     }
-    return randomSelect();          // in case theoretically there is some layout where we must shoot adjacent to a miss 
+    if (best) {
+        return huntSelect(false);
+    }
+    return randomSelect();
 }
 
 // very dumb algorithm, easily tricked
 function adjacentSelect() {
-    const lastHitCell = prevShots.find(shotCell => shotCell.value === 1);
-    if (!adjsHasVal(lastHitCell, 0)) {       // for the case we reach end of the bug
-        const hitCells = prevShots.filter(shotCell => shotCell.value === 1);
+    if (!adjsHasVal(hitCells[0], 0)) {       // for the case we reach end of the bug
         let otherHit = hitCells.find(hitCell => {
             if (adjsHasVal(hitCell, 0)) {
                 return true;
@@ -709,25 +770,22 @@ function adjacentSelect() {
         });
         return selectAdjTarget(otherHit);
     }
-    return selectAdjTarget(lastHitCell);
+    return selectAdjTarget(hitCells[0]);
 }
 
 function selectAdjTarget(cell) {
-    let INF = 0;
-    while (true) {
-        const dir = ADJ_MOVES[Math.floor(Math.random() * 4)];
+    let targetCell = null;
+    const randMoves = [...ADJ_MOVES].sort((a,b) => Math.random() > 0.5);
+    randMoves.forEach(dir => {
         const r = cell.row + dir.dr;
         const c = cell.col + dir.dc;
         // if it is in the board and it hasn't been shot at yet
-        if (r < 10 && r >= 0 && c < 10 && c >= 0 && userBoard[r][c].value === 0) return userBoard[r][c];
-
-        //TESTING
-        INF++;
-        if (INF > 100) {
-            console.log('infinite loop');
-            break;
+        if (r < 10 && r >= 0 && c < 10 && c >= 0 && userBoard[r][c].value === 0) {
+            targetCell = userBoard[r][c];
         }
-    }
+    });
+    if (targetCell) return targetCell;
+    return findLoneHit();
 }
 
 function randomSelect() {
@@ -741,6 +799,8 @@ function randomSelect() {
     }
 }
 
+//============================================= HELPERS ==========================================
+
 // returns true if any of cell's adjacent cells have value
 function adjsHasVal(cell, val) {
     return ADJ_MOVES.some(dir => {
@@ -750,6 +810,11 @@ function adjsHasVal(cell, val) {
             if (userBoard[r][c].value === val) return true;
         }
     });
+}
+
+function targetCells() {
+    const sqBugCells = squashedBugs.reduce((acc, bug) => acc + bug.size, 0);
+    return hitCells.length - sqBugCells;
 }
 
 function addCelltoBoard($board, cell) {
@@ -841,6 +906,10 @@ function removeAllChildNodes(parent) {
     while (parent.firstChild) {
         parent.removeChild(parent.firstChild);
     }
+}
+
+function isInbounds(r, c) {
+    return (r < 10 && c < 10 && r >= 0 && c >= 0);
 }
 
 //adds the animation class to an element then removes it when done
