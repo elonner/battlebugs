@@ -2,7 +2,7 @@
 let MOVE_DELAY = 2000;  // make a fast mode
 const BUG_NAMES = ['', '', 'a fly', 'an ant', 'a cockroach', 'a millipede']
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
-const MODES = ['normal'];
+const MODES = ['normal', 'salvo', 'third'];
 const ADJ_MOVES = [{ dr: 1, dc: 0 }, { dr: 0, dc: 1 }, { dr: -1, dc: 0 }, { dr: 0, dc: -1 }];
 
 //=================================================== STATE VARIABLES ===========================================================
@@ -11,6 +11,7 @@ let difficulty = 0;
 let instructionsHidden = true;
 let fastMode = false;
 
+// TODO: turn cpu and user into Player classes
 let cpuBoard;
 let userBoard;
 let cpuBugs;
@@ -22,11 +23,14 @@ let message;
 let winner; // null, 1: user, -1: cpu
 
 // CPU algorithm variables 
-// let targetBug;
 let prevShots;
-let squashedBugs;
+let userSquashed;
+let cpuSquashed;
 let leExAdjs;
 let hitCells;
+
+// Salvo mode
+let shots;
 
 //======================================================= CLASSES =================================================================
 class Cell {
@@ -38,6 +42,7 @@ class Cell {
         this.isOccupied = false;
         this.$ = $('<div class="cell"></div>');
         this.bug; // bug that is covering cell 
+        this.salvoShot = false; // selected to be shot in a salvo turn 
     }
 
     emptyAdjs() {
@@ -57,7 +62,7 @@ class Cell {
 
     setImg() {
         if (this.$.children().length === 0) {
-            const newImg = $('<img src="https://static.vecteezy.com/system/resources/thumbnails/009/344/496/small/x-transparent-free-png.png" class="cell no-click">')
+            const newImg = $('<img src="Icons/boot.png" class="cell no-click">')
             this.$.append(newImg);
         }
     }
@@ -81,7 +86,7 @@ class Bug {
     }
 }
 
-//====================================================== CACHE =========================================================
+//====================================================== CACHE/SETUP =========================================================
 const $startScreen = $('#start-screen');
 const $radioButtons = $('.radio-btn');
 const $gameScreen = $('#game-screen');
@@ -89,20 +94,10 @@ const $userBoard = $('#user-board');
 const $cpuBoard = $('#cpu-board');
 const $bugBox = $('#bug-box');
 
-//====================================================== EVENT LISTENERS ================================================
-$('#difficulty').on('click', 'h1', changeDifficulty); // set up
+// event listeners needed for game setup
+$('#difficulty').on('click', 'h1', changeDifficulty);
 $('#play-btn').on('click', play);
 $('#show-instructions').on('click', showInstructions);
-
-$bugBox.on('click', '.bug', selectBug);                // place bugs
-$userBoard.on('click', '.cell', placeBug);
-$('#ready-btn').on('click', startGame);
-
-$cpuBoard.on('click', '.cell', userShot);              // game play
-
-$('#play-again').on('click', init);                  // play again
-
-$(document).on('keyup', delegateEvent);                // general
 
 //====================================================== SET UP =====================================================
 function changeDifficulty() {
@@ -129,13 +124,22 @@ function play() {
         if (btnEl.checked) checkedEl = btnEl;
     });
     mode = MODES.findIndex(MODE => MODE === checkedEl.id);
-    if (mode !== 0) {
-        alert('Oops! Sorry, this game mode is not available yet...');
-        return;
-    }
-    if (difficulty === 2) {
-        alert('Oops! Sorry, this difficulty is not available yet...');
-        return;
+    switch (Number(mode)) {
+        case 0:
+            if (difficulty === 2) {
+                alert('Oops! Sorry, this difficulty is not available yet...');
+                return;
+            }
+            break;
+        case 1:
+            if (difficulty !== 0) {
+                alert('Oops! Sorry, Salvo is not available at this difficulty yet...');
+                return;
+            }
+            break;
+        case 2:
+            alert('Oops! Sorry, this game mode is not available yet...');
+            return;
     }
     $startScreen.css({ display: 'none' });
     init();
@@ -154,7 +158,7 @@ function showInstructions() {
         if (btnEl.checked) checkedEl = btnEl;
     });
     mode = MODES.findIndex(MODE => MODE === checkedEl.id);
-    if (mode !== 0) {
+    if (mode === 2) {
         alert('Oops! Sorry, this game mode is not available yet...');
     }
     if (!instructionsHidden) {
@@ -167,6 +171,8 @@ function showInstructions() {
                 instructionsHidden = false;
                 break;
             case 1:
+                $modeInstr.html(`Same rules as normal mode with the following differences:<br>Players stomp 5 times per turn.<br>Whenever one of your bugs has been squashed, you lose one shot on your following turns.`)
+                instructionsHidden = false;
                 break;
             case 2:
                 break;
@@ -177,7 +183,7 @@ function showInstructions() {
 //====================================================== INITIALIZATION ===================================================
 function init() {
     // reset any DOM elements that may have changed in a previous game
-    resetDOM();
+    setupDOM();
     // fill bugs array with the 5 new Bugs
     fillBugs();
     // fill the boards with new empty cells
@@ -191,11 +197,15 @@ function init() {
     message = 'Good luck!'
     winner = null;
 
+    // cpu algorithm
     prevShots = [];
     leExAdjs = [];
     hitCells = [];
-    // targetBug = false;
-    squashedBugs = [];
+    userSquashed = [];
+    cpuSquashed = [];
+
+    // salvo mode
+    shots = [];
 
     render();
 
@@ -207,18 +217,26 @@ function init() {
     }
 }
 
-function resetDOM() {
+// sets up all initial event listeners and resets any DOM elements that may have changed in a previous game
+function setupDOM() {
+    $bugBox.on('click', '.bug', selectBug);                // place bugs
+    $userBoard.on('click', '.cell', placeBug);
+    $('#ready-btn').on('click', startGame);
+
+    $cpuBoard.on('click', '.cell', userShot);              // game play
+
+    $('#play-again').on('click', init);                  // play again
+
+    $(document).on('keyup', delegateEvent);                // general
+
+    // reset DOM
     removeAllChildNodes($cpuBoard[0]);
     removeAllChildNodes($userBoard[0]);
     removeAllChildNodes($bugBox[0]);
 
-    $userBoard.on('click', '.cell', placeBug);
-    $cpuBoard.on('click', '.cell', userShot);
-    $cpuBoard.addClass('hover');
+    $cpuBoard.addClass('hover').removeClass('shrink');
+    $userBoard.addClass('hover').removeClass('shrink');
     $cpuBoard.css({ display: 'none' });
-    $userBoard.addClass('hover');
-    $userBoard.removeClass('shrink');
-    $cpuBoard.removeClass('shrink');
     $bugBox.css({ display: 'flex' });
     $('#play-again').css({ display: 'none' });
     $('#msg').html('');
@@ -426,6 +444,10 @@ function userShot() {
         const r = parseInt($(this)[0].id[1]);
         const c = parseInt($(this)[0].id[3]);
         const cell = cpuBoard[r][c];
+        if (mode === 1) {                           // SALVO
+            salvoAddShot(r, c);
+            return;
+        }
         if (cell.value !== 0) return;
         if (isHit(cpuBoard, cell)) {                  // HIT
             cell.value = 1;
@@ -439,7 +461,7 @@ function userShot() {
             cell.value = -1;
             message = 'You missed!';
         }
-        animateCSS(cell.$[0], 'flip');
+        animateCSSista(cell.$[0], 'puff-in-center');
         winner = getWinner();
         render();
         // animate turn and switch turns
@@ -454,6 +476,63 @@ function userShot() {
             //make sure user can't move when CPU turn 
             $('#cpu-board').off('click');
             setTimeout(cpuShot, MOVE_DELAY);
+        }
+    }
+}
+
+function salvoAddShot(r, c) {
+    const cell = cpuBoard[r][c];
+    if (playing && !cell.$.hasClass('no-click')) {
+        if (cell.value !== 0) return;
+        if (cell.salvoShot) {
+            cell.salvoShot = false;
+            let removeIdx = shots.indexOf(cell);
+            shots.splice(removeIdx, 1);
+        } else if (shots.length < (5 - userSquashed.length)) {
+            cell.salvoShot = true;
+            shots.push(cell);
+        }
+    }
+    render();
+}
+
+function salvoUserShoot() {
+    if (shots.length === (5 - userSquashed.length)) {
+        let msg = '';
+        shots.forEach(cell => {
+            cell.salvoShot = false;
+            if (isHit(cpuBoard, cell)) {                  // HIT
+                cell.value = 1;
+                cell.bug.hits++;
+                if (cell.bug.hits === cell.bug.size) {   // SQUASHED
+                    cell.bug.isSquashed = true;
+                    cpuSquashed.push(cell.bug);
+                    msg += `You squashed ${BUG_NAMES[cell.bug.size]}! `;
+                } else {
+                    msg += `You hit ${BUG_NAMES[cell.bug.size]}! `;
+                }
+            } else {                                     // MISS
+                cell.value = -1;
+            }
+            animateCSSista(cell.$[0], 'puff-in-center');
+        });
+        shots = [];
+        if (msg === '') message = 'All Misses!';
+        else message = msg;
+        winner = getWinner();
+        render();
+
+        if (!winner) {
+            if (!fastMode) {        // SHRINK and unshrink
+                $('#user-board>.bug').each((i, bugEl) => bugEl.classList.remove('shrink'));
+                $userBoard.removeClass('shrink');
+                setTimeout(() => {
+                    $cpuBoard.addClass('shrink');
+                }, 150);
+            }
+            //make sure user can't move when CPU turn 
+            $('#cpu-board').off('click');
+            setTimeout(salvoCpuShot, MOVE_DELAY);
         }
     }
 }
@@ -477,6 +556,10 @@ function delegateEvent(e) {
             }
             if (winner) {
                 init();
+                break;
+            }
+            if (playing && mode === 1) {
+                salvoUserShoot();
                 break;
             }
     }
@@ -520,28 +603,23 @@ function renderBoards() {
         $bugBox.css({ display: 'none' });
         cpuBoard.forEach(row => {
             row.forEach(cell => {
+                if (cell.salvoShot) cell.$.addClass('salvo-selected'); // SALVO
+                else cell.$.removeClass('salvo-selected');
                 if (cell.value === 1) {
-                    // cell.$.removeClass('hover').addClass('hit');
-                    cell.$.css({ backgroundColor: 'red' });
                     cell.setImg();
-                    // cell.el.style.backgroundColor = 'red';
                 }
                 if (cell.value === -1) {
-                    // cell.$.removeClass('hover').addClass('miss');
                     cell.$.css({ backgroundColor: '#4DCCBD' });
-                    // cell.el.style.backgroundColor = 'green';
                 }
             });
         });
         userBoard.forEach(row => {
             row.forEach(cell => {
                 if (cell.value === 1) {
-                    // cell.$.removeClass('hover').addClass('hit');
-                    cell.$.css({ backgroundColor: 'red', zIndex: '1' });
                     cell.setImg();
+                    cell.$.css({ backgroundColor: 'rgba(255,255,255,0.5)', border: 'rgba(1,1,1,0)', zIndex: '1' });
                 }
                 if (cell.value === -1) {
-                    // cell.$.removeClass('hover').addClass('miss');
                     cell.$.css({ backgroundColor: '#4DCCBD', zIndex: '1' });
                 }
             });
@@ -570,6 +648,7 @@ function renderMsgs() {
         $('#ready-btn').css({ display: 'none' });
         $('#msg').html(`${message}`);
         $('#instructions').html("<span class='action'>Click</span> on a cell in your opponent's board to stomp!")
+        if (mode === 1) $('#instructions').html("<span class='action'>Click</span> on <span class='action'>5</span> cells in your opponent's board where you would like to stop. Press <span class='action'>enter</span> to stomp!!")
     }
 }
 
@@ -602,15 +681,13 @@ function cpuShot() {
             break;
     }
     if (isHit(userBoard, targetCell)) {                      // HIT
-        // targetBug = true;  // for cpu algorithm 
         targetCell.value = 1;
         targetCell.bug.hits++;
         message = 'Ouch!';
         hitCells.unshift(targetCell);
         if (targetCell.bug.hits === targetCell.bug.size) {   // SQUASHED
             targetCell.bug.isSquashed = true;
-            squashedBugs.push(targetCell.bug);
-            // targetBug = false;
+            userSquashed.push(targetCell.bug);
             message = "That one's gonna hurt..."
         }
     } else {                                                 // MISS
@@ -627,9 +704,57 @@ function cpuShot() {
             }, 150);
         }, 0.5 * MOVE_DELAY);
     }
-    animateCSS(targetCell.$[0], 'flip');
+    animateCSSista(targetCell.$[0], 'puff-in-center');    
     render();
     if (!winner) {
+        $('#cpu-board').on('click', '.cell', userShot);
+    }
+}
+
+function salvoCpuShot() {
+    let salvoSelected;
+    switch (difficulty) {
+        case 0:
+            salvoSelected = salvoEasySelect();
+            break;
+        case 1:
+            salvoSelected = salvoMediumSelect();
+            break;
+        case 2:
+            salvoSelected = salvoHardSelect();
+            break;
+    }
+
+    salvoSelected.forEach(cell => {
+        if (isHit(userBoard, cell)) {                      // HIT
+            cell.value = 1;
+            cell.bug.hits++;
+            message = 'Ouch!';
+            hitCells.unshift(cell);
+            if (cell.bug.hits === cell.bug.size) {   // SQUASHED
+                cell.bug.isSquashed = true;
+                userSquashed.push(cell.bug);
+                message = "That one's gonna hurt..."
+            }
+        } else {                                                 // MISS
+            cell.value = -1;
+        }
+        animateCSSista(cell.$[0], 'puff-in-center');
+    });
+    if (message !== 'Ouch!' && message !== "That one's gonna hurt...") message = 'Phew! That was close!';
+    winner = getWinner();
+    render();
+
+    if (!winner) {
+        if (!fastMode) {                    // SHRINK and unshrink boards
+            setTimeout(() => {
+                $cpuBoard.removeClass('shrink');
+                setTimeout(() => {
+                    $userBoard.addClass('shrink');
+                    $('#user-board>.bug').each((i, bugEl) => bugEl.classList.add('shrink'));
+                }, 150);
+            }, 0.5 * MOVE_DELAY);
+        }
         $('#cpu-board').on('click', '.cell', userShot);
     }
 }
@@ -644,6 +769,25 @@ function easySelect() {
 
     prevShots.unshift(targetCell);
     return targetCell;
+}
+
+function salvoEasySelect() {
+    let targetCell;
+    let salvoSelected = [];
+    if (targetCells() === 0) {
+        while (salvoSelected.length < (5 - cpuSquashed.length)) {
+            targetCell = randomSelect();
+            if (!salvoSelected.includes(targetCell)) {
+                salvoSelected.push(targetCell);
+                targetCell.salvoShot = true;
+                prevShots.unshift(targetCell);
+            }
+        }
+    } else {
+        salvoSelected = salvoSimpleSelect();
+        salvoSelected.forEach(cell => prevShots.unshift(cell));
+    }
+    return salvoSelected;
 }
 
 function mediumSelect() {
@@ -774,7 +918,7 @@ function adjacentSelect() {
 
 function selectAdjTarget(cell) {
     let targetCell = null;
-    const randMoves = [...ADJ_MOVES].sort((a,b) => Math.random() > 0.5);
+    const randMoves = [...ADJ_MOVES].sort((a, b) => Math.random() - 0.5);
     randMoves.forEach(dir => {
         const r = cell.row + dir.dr;
         const c = cell.col + dir.dc;
@@ -785,6 +929,32 @@ function selectAdjTarget(cell) {
     });
     if (targetCell) return targetCell;
     return findLoneHit();
+}
+
+function salvoSimpleSelect() {
+    const salvoSelected = [];
+    let i = 0;
+    let targetCell;
+    while (salvoSelected.length < (5 - cpuSquashed.length)) {
+        if (i >= hitCells.length) {
+            targetCell = randomSelect();
+            if (!salvoSelected.includes(targetCell)) {
+                salvoSelected.push(targetCell);
+                targetCell.salvoShot = true;
+                prevShots.unshift(targetCell);
+            }
+        } else if (someUnselected(hitCells[i])) {    
+            targetCell = selectAdjTarget(hitCells[i]);
+            if (!salvoSelected.includes(targetCell)) {
+                salvoSelected.push(targetCell);
+                targetCell.salvoShot = true;
+                prevShots.unshift(targetCell);
+            }
+        } else {
+            i++;
+        }
+    }
+    return salvoSelected;
 }
 
 function randomSelect() {
@@ -811,8 +981,21 @@ function adjsHasVal(cell, val) {
     });
 }
 
+// returns true if at least one adjacent sell is available to be selected
+function someUnselected(cell) {
+    return ADJ_MOVES.some(dir => {
+        const r = cell.row + dir.dr;
+        const c = cell.col + dir.dc;
+        if (r<10 && c<10 && c>=0 && r>=0) {
+            if (!userBoard[r][c].salvoShot && userBoard[r][c].value === 0) {
+                return true;
+            }
+        }
+    });
+}
+
 function targetCells() {
-    const sqBugCells = squashedBugs.reduce((acc, bug) => acc + bug.size, 0);
+    const sqBugCells = userSquashed.reduce((acc, bug) => acc + bug.size, 0);
     return hitCells.length - sqBugCells;
 }
 
@@ -918,6 +1101,14 @@ function animateCSS(element, animation, prefix = 'animate__') {
     element.addEventListener('animationend', function (e) {
         e.stopPropagation();
         element.classList.remove(`${prefix}animated`, animationName);
+    });
+}
+
+function animateCSSista(element, animation) {
+    element.classList.add(animation);
+    element.addEventListener('animationend', function (e) {
+        e.stopPropagation();
+        element.classList.remove(animation);
     });
 }
 

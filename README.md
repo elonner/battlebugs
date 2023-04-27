@@ -8,7 +8,7 @@ Battle Bugs! Instead of ships, bugs. Could be unique and fun with cool animation
 * ~~Use jQuery~~
 * ~~Follows organization structure as outlined below~~
 * ~~Decent UI~~
-* 2 CPU difficulties 
+* ~~2 CPU difficulties~~ 
 * 2 game modes
 * Cool method to place bugs
 * Playable only with keyboard and only with mouse 
