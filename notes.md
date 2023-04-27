@@ -16,7 +16,8 @@ Battle Bugs! Instead of ships, bugs. Could be unique and fun with cool animation
 * Animations & Sounds 
 * 3rd difficulty
 * More game modes
-* More functionality as I learn full-stack
+* Responsive design for mobile 
+* More functionality as I learn full-stack (online two-player)
 
 ## Organization:
 

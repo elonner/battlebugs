@@ -358,6 +358,11 @@
     filter: brightness(1.5);
 }
 
+.squashed {
+    z-index: 2;
+    filter: none;
+}
+
 
 #play-again {
     display: none;

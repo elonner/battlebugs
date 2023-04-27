@@ -81,8 +81,15 @@ class Bug {
         this.isPlaced = false; // is it placed on the board already
     }
 
-    setImg(imgSrc) {
-        this.$.attr('src', imgSrc);
+    squash() {
+        this.$.attr('src', `Icons/${this.size}dead.png`);
+        this.$.addClass('squashed');
+        this.cellsOn.forEach(cell => {
+            // cell.$.css({visibility: 'hidden'});
+            // console.log(`(${cell.row}, ${cell.col}): ${cell.$[0].firstChild === true}`);
+            removeAllChildNodes(cell.$[0]);
+            // console.log(`(${cell.row}, ${cell.col}): ${cell.$[0].firstChild === true}`);
+        });
     }
 }
 
@@ -666,6 +673,12 @@ function renderGameOver() {
     $('#play-again').toggle();
 }
 
+
+// TODO: remove class shrink on game end and call showbugs to show the cpus bugs
+function showBugs() {
+
+}
+
 //============================================== CPU TURN =========================================
 function cpuShot() {
     let targetCell;
@@ -687,6 +700,7 @@ function cpuShot() {
         hitCells.unshift(targetCell);
         if (targetCell.bug.hits === targetCell.bug.size) {   // SQUASHED
             targetCell.bug.isSquashed = true;
+            targetCell.bug.squash();
             userSquashed.push(targetCell.bug);
             message = "That one's gonna hurt..."
         }
@@ -733,6 +747,7 @@ function salvoCpuShot() {
             hitCells.unshift(cell);
             if (cell.bug.hits === cell.bug.size) {   // SQUASHED
                 cell.bug.isSquashed = true;
+                cell.bug.squash();
                 userSquashed.push(cell.bug);
                 message = "That one's gonna hurt..."
             }
@@ -1086,6 +1101,7 @@ function allBugsPlaced(bugs) {
 
 function removeAllChildNodes(parent) {
     while (parent.firstChild) {
+        // console.log('here');
         parent.removeChild(parent.firstChild);
     }
 }
