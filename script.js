@@ -1,5 +1,5 @@
 //======================================================== CONSTANTS ======================================================
-let MOVE_DELAY = 300;  // make a fast mode
+let MOVE_DELAY = 2500;  // make a fast mode
 const BUG_NAMES = ['', '', 'a fly', 'an ant', 'a cockroach', 'a millipede']
 const NUM_DIF_BUGS = 4;
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
