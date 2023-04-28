@@ -1,6 +1,7 @@
 //======================================================== CONSTANTS ======================================================
 let MOVE_DELAY = 2000;  // make a fast mode
 const BUG_NAMES = ['', '', 'a fly', 'an ant', 'a cockroach', 'a millipede']
+const NUM_DIF_BUGS = 4;
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
 const MODES = ['normal', 'salvo', 'third'];
 const ADJ_MOVES = [{ dr: 1, dc: 0 }, { dr: 0, dc: 1 }, { dr: -1, dc: 0 }, { dr: 0, dc: -1 }];
@@ -12,27 +13,98 @@ let instructionsHidden = true;
 let fastMode = false;
 
 // TODO: turn cpu and user into Player classes
-let cpuBoard;
-let userBoard;
-let cpuBugs;
-let userBugs;
-let selectedBug;
-let placedBugs;
+let cpuBoard; // --> Player
+let userBoard; // --> Player
+let cpuBugs; // --> Player
+let userBugs; // --> Player
+let selectedBug; // --> Player
+let placedBugs; // --> Player
 let playing;
 let message;
 let winner; // null, 1: user, -1: cpu
 
 // CPU algorithm variables 
 let prevShots;
-let userSquashed;
-let cpuSquashed;
-let leExAdjs;
-let hitCells;
+let userSquashed; // --> Player
+let cpuSquashed; // --> Player
+let leExAdjs; // --> Computer
+let hitCells; // --> Computer
 
 // Salvo mode
-let shots;
+let shots; // --> Player
 
 //======================================================= CLASSES =================================================================
+class Player {
+    constructor() {
+        this.board = [];                // fine for now, but try changing the init functions to work with this approach
+        for (let r = 0; r < 10; r++) {
+            this.board.push([]);
+            for (let c = 0; c < 10; c++) {
+                this.board[r].push(new Cell(0, [r, c]));
+            }
+        }
+        this.bugs = [];                 // fine for now, but try changing the init functions to work with this approach
+        bugSizes = [2, 3, 3, 4, 5];
+        bugSizes.forEach(size => {
+            userBugs.push(new Bug(size));
+            cpuBugs.push(new Bug(size));
+        });
+        this.selectedBug = false;
+        this.placedBugs = [];
+        this.squashed = [];
+
+        // SALVO
+        this.shots = [];
+    }
+
+    placeBugs() {
+        let b = NUM_DIF_BUGS;
+        while (b >= 0) {
+            var r = Math.floor(Math.random() * 10);
+            var c = Math.floor(Math.random() * 10);
+            this.bugs[b].orient = Math.random() > 0.5 ? 1 : -1;
+            var l = this.bugs[b].size;
+            switch (this.bugs[b].orient) {
+                case 1:
+
+                    if (isValidPos(this.board, this.bugs[b], r, c)) {
+                        for (let i = r; i < r + l; i++) {
+                            this.board[i][c].isOccupied = true;
+                            this.board[i][c].bug = this.bugs[b];
+                            this.bugs[b].cellsOn.push(this.board[i][c]);
+                        }
+                        this.bugs[b].row = r;
+                        this.bugs[b].col = c;
+                        b--;
+                    }
+                    break;
+                case -1:
+                    if (isValidPos(this.board, this.bugs[b], r, c)) {
+                        for (let i = c; i < c + l; i++) {
+                            this.board[r][i].isOccupied = true;
+                            this.board[r][i].bug = this.bugs[b];
+                            this.bugs[b].cellsOn.push(this.board[r][i]);
+                        }
+                        this.bugs[b].$.removeClass('vertical').addClass('horizontal');
+                        this.bugs[b].row = r;
+                        this.bugs[b].col = c;
+                        b--;
+                    }
+                    break;
+            }
+        }
+    }
+}
+
+class Computer extends Player {
+    constructor() {
+        super();
+        this.prevShots = [];
+        this.leExAdjs = [];
+        this.hitCells = [];
+    }
+}
+
 class Cell {
     constructor(value, pos) {
         this.value = value; // 0: not shot at, 1: hit, -1: miss
@@ -85,10 +157,8 @@ class Bug {
         this.$.attr('src', `Icons/${this.size}dead.png`);
         this.$.addClass('squashed');
         this.cellsOn.forEach(cell => {
-            // cell.$.css({visibility: 'hidden'});
-            // console.log(`(${cell.row}, ${cell.col}): ${cell.$[0].firstChild === true}`);
             removeAllChildNodes(cell.$[0]);
-            // console.log(`(${cell.row}, ${cell.col}): ${cell.$[0].firstChild === true}`);
+            cell.$.css({ backgroundColor: 'initial', border: '0.3vmin solid #5f98bf', opacity: '50%'});
         });
     }
 }
@@ -192,27 +262,27 @@ function init() {
     // reset any DOM elements that may have changed in a previous game
     setupDOM();
     // fill bugs array with the 5 new Bugs
-    fillBugs();
+    fillBugs(); // --> Player
     // fill the boards with new empty cells
-    initBoards();
+    initBoards(); // --> Player
     // randomize CPU bugs
-    placeCpuBugs();
+    placeCpuBugs(); // --> Player
 
     playing = false;
-    selectedBug = null;
-    placedBugs = [];
+    selectedBug = null; // --> Player
+    placedBugs = []; // --> Player
     message = 'Good luck!'
     winner = null;
 
     // cpu algorithm
-    prevShots = [];
-    leExAdjs = [];
-    hitCells = [];
-    userSquashed = [];
-    cpuSquashed = [];
+    prevShots = []; // --> Computer
+    leExAdjs = []; // --> Computer
+    hitCells = []; // --> Computer
+    userSquashed = []; // --> Player
+    cpuSquashed = []; // --> Player
 
     // salvo mode
-    shots = [];
+    shots = []; // --> Player
 
     render();
 
@@ -278,7 +348,7 @@ function initBoards() {
 // TODO: getFancy(howFancy), weird placements to throw off user
 // randomize cpu bugs
 function placeCpuBugs() {
-    let b = 4
+    let b = NUM_DIF_BUGS;
     while (b >= 0) {
         var r = Math.floor(Math.random() * 10);
         var c = Math.floor(Math.random() * 10);
@@ -315,7 +385,7 @@ function placeCpuBugs() {
 
 // FOR TESTING! RANDOMLY PLACES USER BUGS
 function placeUserBugs() {
-    let b = 4
+    let b = NUM_DIF_BUGS;
     while (b >= 0) {
         var r = Math.floor(Math.random() * 10);
         var c = Math.floor(Math.random() * 10);
@@ -602,7 +672,7 @@ function initialRender() {
     }
 }
 
-function renderBoards() {
+function renderBoards() {  // --> Player
     $gameScreen.css({ display: 'flex' });
     if (playing) {                                  // HOVER
         $cpuBoard.css({ display: 'grid' });
@@ -622,12 +692,17 @@ function renderBoards() {
         });
         userBoard.forEach(row => {
             row.forEach(cell => {
-                if (cell.value === 1) {
-                    cell.setImg();
-                    cell.$.css({ backgroundColor: 'rgba(255,255,255,0.5)', border: 'rgba(1,1,1,0)', zIndex: '1' });
-                }
-                if (cell.value === -1) {
-                    cell.$.css({ backgroundColor: '#4DCCBD', zIndex: '1' });
+                // console.log(cell.bug, cell.bug === true, !!cell.bug);
+                if (!!cell.bug && cell.bug.isSquashed) {
+                    cell.bug.squash();
+                } else {
+                    if (cell.value === 1) {
+                        cell.setImg();
+                        cell.$.css({ backgroundColor: 'rgba(255,255,255,0.5)', border: 'rgba(1,1,1,0)', zIndex: '1' });
+                    }
+                    if (cell.value === -1) {
+                        cell.$.css({ backgroundColor: '#4DCCBD', zIndex: '1' });
+                    }
                 }
             });
         });
@@ -635,7 +710,7 @@ function renderBoards() {
 }
 
 // hor/vert classes are added/removed in rotateBug
-function renderBugs() {
+function renderBugs() { // --> Player
     if (playing) {
         userBugs.forEach(bug => {
             if (bug.orient === 1) { // vertical
@@ -682,6 +757,7 @@ function showBugs() {
 //============================================== CPU TURN =========================================
 function cpuShot() {
     let targetCell;
+    let okToAnimate = true;
     switch (difficulty) {
         case 0:
             targetCell = easySelect();
@@ -699,8 +775,8 @@ function cpuShot() {
         message = 'Ouch!';
         hitCells.unshift(targetCell);
         if (targetCell.bug.hits === targetCell.bug.size) {   // SQUASHED
+            okToAnimate = false;
             targetCell.bug.isSquashed = true;
-            targetCell.bug.squash();
             userSquashed.push(targetCell.bug);
             message = "That one's gonna hurt..."
         }
@@ -718,7 +794,7 @@ function cpuShot() {
             }, 150);
         }, 0.5 * MOVE_DELAY);
     }
-    animateCSSista(targetCell.$[0], 'puff-in-center');    
+    if (okToAnimate) animateCSSista(targetCell.$[0], 'puff-in-center');
     render();
     if (!winner) {
         $('#cpu-board').on('click', '.cell', userShot);
@@ -747,7 +823,6 @@ function salvoCpuShot() {
             hitCells.unshift(cell);
             if (cell.bug.hits === cell.bug.size) {   // SQUASHED
                 cell.bug.isSquashed = true;
-                cell.bug.squash();
                 userSquashed.push(cell.bug);
                 message = "That one's gonna hurt..."
             }
@@ -958,7 +1033,7 @@ function salvoSimpleSelect() {
                 targetCell.salvoShot = true;
                 prevShots.unshift(targetCell);
             }
-        } else if (someUnselected(hitCells[i])) {    
+        } else if (someUnselected(hitCells[i])) {
             targetCell = selectAdjTarget(hitCells[i]);
             if (!salvoSelected.includes(targetCell)) {
                 salvoSelected.push(targetCell);
@@ -1001,7 +1076,7 @@ function someUnselected(cell) {
     return ADJ_MOVES.some(dir => {
         const r = cell.row + dir.dr;
         const c = cell.col + dir.dc;
-        if (r<10 && c<10 && c>=0 && r>=0) {
+        if (r < 10 && c < 10 && c >= 0 && r >= 0) {
             if (!userBoard[r][c].salvoShot && userBoard[r][c].value === 0) {
                 return true;
             }
@@ -1101,7 +1176,6 @@ function allBugsPlaced(bugs) {
 
 function removeAllChildNodes(parent) {
     while (parent.firstChild) {
-        // console.log('here');
         parent.removeChild(parent.firstChild);
     }
 }
