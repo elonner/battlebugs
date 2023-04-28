@@ -1,5 +1,5 @@
 //======================================================== CONSTANTS ======================================================
-let MOVE_DELAY = 2000;  // make a fast mode
+let MOVE_DELAY = 300;  // make a fast mode
 const BUG_NAMES = ['', '', 'a fly', 'an ant', 'a cockroach', 'a millipede']
 const NUM_DIF_BUGS = 4;
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
@@ -20,6 +20,7 @@ let userBugs; // --> Player
 let selectedBug; // --> Player
 let placedBugs; // --> Player
 let playing;
+let turn; 
 let message;
 let winner; // null, 1: user, -1: cpu
 
@@ -151,14 +152,16 @@ class Bug {
         this.isSquashed = false; //css idea --> footprints then squashed animation
         this.cellsOn = []; // links to cells bug is covering
         this.isPlaced = false; // is it placed on the board already
+        this.borderColor = '#5f98bf';
     }
 
-    squash() {
+    squash(cpu = false) {
         this.$.attr('src', `Icons/${this.size}dead.png`);
         this.$.addClass('squashed');
         this.cellsOn.forEach(cell => {
             removeAllChildNodes(cell.$[0]);
-            cell.$.css({ backgroundColor: 'initial', border: '0.3vmin solid #5f98bf', opacity: '50%'});
+            if (cpu) this.borderColor = '#ca7b7b';
+            cell.$.css({ backgroundColor: 'initial', border: `0.3vmin solid ${this.borderColor}`, opacity: '50%' });
         });
     }
 }
@@ -175,6 +178,17 @@ const $bugBox = $('#bug-box');
 $('#difficulty').on('click', 'h1', changeDifficulty);
 $('#play-btn').on('click', play);
 $('#show-instructions').on('click', showInstructions);
+
+// needed for bug placement
+$bugBox.on('click', '.bug', selectBug);
+$('#ready-btn').on('click', startGame);
+$userBoard.on('click', '.cell', placeBug);               
+
+$cpuBoard.on('click', '.cell', userShot);              // game play
+
+$('#play-again').on('click', init);                  // play again
+
+$(document).on('keyup', delegateEvent);                // general
 
 //====================================================== SET UP =====================================================
 function changeDifficulty() {
@@ -224,7 +238,7 @@ function play() {
 
 function startGame() {
     playing = true;
-    $userBoard.off('click');
+    // $userBoard.off('click');
     render();
 }
 
@@ -269,6 +283,7 @@ function init() {
     placeCpuBugs(); // --> Player
 
     playing = false;
+    turn = 1;
     selectedBug = null; // --> Player
     placedBugs = []; // --> Player
     message = 'Good luck!'
@@ -296,16 +311,6 @@ function init() {
 
 // sets up all initial event listeners and resets any DOM elements that may have changed in a previous game
 function setupDOM() {
-    $bugBox.on('click', '.bug', selectBug);                // place bugs
-    $userBoard.on('click', '.cell', placeBug);
-    $('#ready-btn').on('click', startGame);
-
-    $cpuBoard.on('click', '.cell', userShot);              // game play
-
-    $('#play-again').on('click', init);                  // play again
-
-    $(document).on('keyup', delegateEvent);                // general
-
     // reset DOM
     removeAllChildNodes($cpuBoard[0]);
     removeAllChildNodes($userBoard[0]);
@@ -517,7 +522,7 @@ function undoPlacement() {
 }
 
 function userShot() {
-    if (playing && !$(this).hasClass('no-click')) {
+    if (playing && turn === 1 && !winner && !$(this).hasClass('no-click')) {
         const r = parseInt($(this)[0].id[1]);
         const c = parseInt($(this)[0].id[3]);
         const cell = cpuBoard[r][c];
@@ -551,7 +556,7 @@ function userShot() {
                 }, 150);
             }
             //make sure user can't move when CPU turn 
-            $('#cpu-board').off('click');
+            turn *= -1;
             setTimeout(cpuShot, MOVE_DELAY);
         }
     }
@@ -608,7 +613,7 @@ function salvoUserShoot() {
                 }, 150);
             }
             //make sure user can't move when CPU turn 
-            $('#cpu-board').off('click');
+            turn *= -1;
             setTimeout(salvoCpuShot, MOVE_DELAY);
         }
     }
@@ -723,6 +728,21 @@ function renderBugs() { // --> Player
     }
 }
 
+function renderCpuBugs() { // --> Player
+    cpuBugs.forEach(bug => {
+        if (bug.orient === 1) { // vertical
+            bug.$.css({ gridColumn: `${bug.col + 1}`, gridRow: `${bug.row + 1} / span ${bug.size}` });
+        } else { // horizontal (-1)
+            bug.$.addClass('horizontal');
+            bug.$.css({ gridColumn: `${bug.col + 1} / span ${bug.size}`, gridRow: `${bug.row + 1}` });
+        }
+        $cpuBoard.append(bug.$);
+        if (bug.isSquashed) {
+            bug.squash(cpu = true);
+        }
+    });
+}
+
 function renderMsgs() {
     $('#game-info').html(`Mode: ${MODES[mode]} &nbsp &nbsp Difficulty: ${DIFFICULTIES[difficulty].toLowerCase()}`);
     $('#instructions').html("First <span class='action'>click</span> on a bug to select it, then on a tile to place the bug (clicked tile corresponds to left/top of bug). Press <span class='action'>'space'</span> to flip the bug horizontal. Press <span class='action'>'backspace'</span> to undo placement.<br><br>Once you have placed all your bugs, press <span class='action'>'enter'</span> or <span class='action'>click ready</span> to start the game.");
@@ -735,7 +755,10 @@ function renderMsgs() {
 }
 
 function renderGameOver() {
-    $cpuBoard.off('click');
+    $cpuBoard.removeClass('shrink');
+    $userBoard.removeClass('shrink');
+    renderCpuBugs();
+    // $cpuBoard.off('click');
     $('.hover').removeClass('hover');
     switch (winner) {
         case 1:
@@ -797,7 +820,7 @@ function cpuShot() {
     if (okToAnimate) animateCSSista(targetCell.$[0], 'puff-in-center');
     render();
     if (!winner) {
-        $('#cpu-board').on('click', '.cell', userShot);
+        turn *= -1;
     }
 }
 
@@ -845,7 +868,7 @@ function salvoCpuShot() {
                 }, 150);
             }, 0.5 * MOVE_DELAY);
         }
-        $('#cpu-board').on('click', '.cell', userShot);
+        turn *= -1;
     }
 }
 
@@ -1206,6 +1229,8 @@ function animateCSSista(element, animation) {
 /* Questions:
 
 I try to keep DOM manip and data manip separate, but what about functions that are small and simple but do both? 
+
+Add and remove event listeners, or check for conditions in the event handler? 
 
 What can take this to the next level as far as me looking employable and professional? 
 
