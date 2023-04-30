@@ -51,6 +51,7 @@ class Player {
             userBugs.push(new Bug(size));
             cpuBugs.push(new Bug(size));
         });
+        this.op; 
         this.selectedBug = false;
         this.placedBugs = [];
         this.squashed = [];
@@ -936,6 +937,37 @@ function hardSelect() {
 }
 
 //================================================ CPU ALGORITHMS ================================================================
+// returns true if it is possible that cell is covered by bug, assumed to be passed the largest un-squashed bug, in hunt mode
+function isBestShot(cell, bug) {
+    let count = 0; 
+    let r = cell.row;
+    let c = cell.col;
+    while (isInbounds(r,c) && userBoard[r][c].value === 0) {        // VERTICAL
+        count++;
+        r++;
+    }
+    r = cell.row;
+    while (isInbounds(r,c) && userBoard[r][c].value === 0) {
+        count++;
+        r--;
+    }
+    if (count >= bug.size) return true;
+    count = 0;                                                     // HORIZONTAL
+    r = cell.row;
+    while (isInbounds(r,c) && userBoard[r][c].value === 0) {
+        count++;
+        c++;
+    }
+    c = cell.col;
+    while (isInbounds(r,c) && userBoard[r][c].value === 0) {
+        count++;
+        c--;
+    }
+    if (count >= bug.size) return true;
+    else return false;
+}
+
+
 // returns a valid cell to shoot at, decides if there are multiple targeted cells and if they are colinear or not
 function targetSelect() {
     // return an empty cell adjacent to the hit cell with the least adjacents explored if only one target cell 
@@ -1104,7 +1136,7 @@ function randomSelect() {
     }
 }
 
-//============================================= HELPERS ==========================================
+//============================================= HELPERS =====================================================================
 
 // returns true if any of cell's adjacent cells have value
 function adjsHasVal(cell, val) {
